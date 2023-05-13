@@ -1,6 +1,9 @@
 import numpy as np
 
 
+COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
+          '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
 def collect_data_and_q(h5, conds):
 
     data_dict = {}
@@ -48,6 +51,11 @@ def collect_positions(h5, conds): # pass conds to make sure the order is correct
     return x_arr, y_arr
 
 def minmax_norm(data):
-    data -= np.min(data)
-    data /= np.max(data)
-    return data
+    _data = data - np.min(data)
+    _data /= np.max(_data)
+    return _data
+
+def index_phase(phase_names, phase_ls):
+    return [idx for idx, name in enumerate(phase_ls)
+                 if name in phase_names]
+

@@ -4,8 +4,11 @@ import sys
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
+from matplotlib.collections import PatchCollection
+import matplotlib.lines as mlines
 
-from util import minmax_norm
+from util import minmax_norm, COLORS
 from pyPhaseLabel import evaluate_obj
 
 class stripeview(FigureCanvasQTAgg):
@@ -15,9 +18,10 @@ class stripeview(FigureCanvasQTAgg):
         super(stripeview, self).__init__(fig)
         self.setParent = parent
 
-        gs = fig.add_gridspec(1, 2)
-        self.heatmap = fig.add_subplot(gs[0, 0])
-        self.spectra = fig.add_subplot(gs[0, 1])
+        gs = fig.add_gridspec(3, 2)
+        self.heatmap = fig.add_subplot(gs[:, 0])
+        self.spectra = fig.add_subplot(gs[:2, 1])
+        self.stick_patterns = fig.add_subplot(gs[-1, 1])
 
         self.bottomLeftX = 0
         self.bottomLeftY = -100
@@ -86,6 +90,7 @@ class stripeview(FigureCanvasQTAgg):
             self.avg_pattern = minmax_norm(self.avg_pattern)
             self.spectra.clear()
             self.spectra.plot(self.q, self.avg_pattern, color='r', label="XRD")
+            self.spectra.set_xlim((self.q[0], self.q[-1]))
             self.spectra.legend()
 
             self.draw()
@@ -114,7 +119,7 @@ class stripeview(FigureCanvasQTAgg):
         self.topRightX = 0
         self.topRightY = 100
 
-    def plot(self, data, fit_result=None):
+    def plot(self, data, stick_patterns=None, fit_result=None):
         self.clear_figures()
         self.q = data['q']
         self.data = data['data']
@@ -146,17 +151,18 @@ class stripeview(FigureCanvasQTAgg):
                 phase_name.append(cp.name)
         self.spectra.set_title("_".join(phase_name))
         self.spectra.legend()
-
+        self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         self.spectra.set_ylabel("Avg intensity (a.u.)")
 
+        if stick_patterns is not None:
+            self.plot_cifs(cif_patterns)
 
         self.draw()
 
     def replot_spectra(self, fit_result=None):
         if self.avg_pattern is None:
                 self.avg_pattern = minmax_norm(self.data[:,round(self.data.shape[1]/2)])
-        #(self.avgplot, ) = self.spectra.plot(self.q, self.avg_pattern, color='r', label="XRD")
     
         phase_name = []
         if fit_result is not None:
@@ -169,9 +175,33 @@ class stripeview(FigureCanvasQTAgg):
                 phase_name.append(cp.name)
         self.spectra.set_title("_".join(phase_name))
         self.spectra.legend()
-    
+        self.spectra.set_xlim((self.q[0], self.q[-1])) 
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         self.spectra.set_ylabel("Avg intensity (a.u.)")
     
-    
+        self.draw()
+
+    def plot_cifs(self, sticks):
+        """ 
+        stick_patterns: dictionary: {phase: [q, peak_height]}
+        """
+        self.stick_patterns.clear()
+        proxies = []
+        for i, phase in enumerate(sticks):
+            stick = sticks[phase] 
+            qs = stick[:,0]
+            Is = stick[:,1]
+
+            boxes = [Rectangle((q-0.1, 0), .2, I)
+                               for q, I in zip(qs, Is)]
+            pc = PatchCollection(boxes, facecolor=COLORS[i], alpha=1.)
+            proxy = mlines.Line2D([], [], marker="_", linewidth=1,color=COLORS[i], markersize=15, label=phase)
+            proxies.append(proxy)
+            self.stick_patterns.add_collection(pc)
+            
+
+        self.stick_patterns.plot()
+        self.stick_patterns.legend(handles=proxies, fontsize=7)
+        self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+        self.stick_patterns.set_ylim((0, 1))
         self.draw()

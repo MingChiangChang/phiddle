@@ -20,6 +20,7 @@ class labeler():
         self.mean_θ = [1., .5, .1]
         self.std_θ = [0.001, 0.05, 0.05]
 
+        self.phase_names = [phase.name for phase in self.phases]
 
     def fit(self, q, data):
         tree = Lazytree(self.phases, q)
@@ -37,3 +38,8 @@ class labeler():
         ind = np.argmax(t)
         print(results[ind].phase_model.CPs)
         return results[ind]
+
+    def get_phase_names(self, isChecked_ls):
+        return [self.phases[idx].name for idx, check in enumerate(isChecked_ls)
+                                        if check]
+

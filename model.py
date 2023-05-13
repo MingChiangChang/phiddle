@@ -10,7 +10,7 @@ class datamodel():
         if file_path.endswith("h5"):
             self.h5_path = file_path # keep for now, may be redundent
             self.h5 = h5py.File(file_path, 'r')['exp']
-
+            
             self._ind = 0
             self.conds = sorted(list(self.h5))
             self.data = collect_data_and_q(self.h5, self.conds)
@@ -25,14 +25,42 @@ class datamodel():
             self.q = np.load(q_path)
             
         # TODO: initiate phase diagram
+        # First only supports center phase labeling
+        self.phases = ["" for i in range(len(self.conds))]
 
     #@Slot(int)
     def update(self, ind):
         self.ind = ind
 
+    def add_to_phase_diagram(self, phase_names):
+        self.phases[self._ind] = phase_names
+        print(self.phases)
+
     def __getitem__(self, ind):
        data = self.data[self.conds[ind]]
        return data
+
+
+
+    @property
+    def labeled(self):
+        return [bool(phase) for phase in self.phases]
+
+    @property
+    def labeled_dwells(self):
+        return self.dwells[self.labeled]
+    
+    @property
+    def labeled_tpeaks(self):
+        return self.tpeaks[self.labeled]
+
+    @property
+    def labeled_x(self):
+        return self.x[self.labeled]
+
+    @property
+    def labeled_y(self):
+        return self.y[self.labeled]
 
     @property
     def current_data(self):
