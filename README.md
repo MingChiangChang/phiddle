@@ -1,8 +1,8 @@
 # TODOs
 - [ ] Phase diagram 
 - [ ] Phase diagram data structure
-- [ ] Plot labeled point
-- [ ] Loading h5
+- [x] Plot labeled point
+- [x] Loading h5
 - [ ] Saving json 
 - [ ] Find out why labeling is so slow
 
