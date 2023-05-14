@@ -18,7 +18,7 @@ class labeler():
 
         self.std_noise = 0.05
         self.mean_θ = [1., .5, .1]
-        self.std_θ = [0.001, 0.05, 0.05]
+        self.std_θ = [0.05, 0.5, 0.05]
 
         self.phase_names = [phase.name for phase in self.phases]
 
@@ -26,10 +26,10 @@ class labeler():
         tree = Lazytree(self.phases, q)
         data -= mcbl(data, q, 8.) 
         data[data<0] = 1E-5
-        data -= np.min(data)
+        #data -= np.min(data)
         data /= np.max(data)
         result = search(tree, q, data, 2, 2, .1, False, False, 8.,
-                self.std_noise, self.mean_θ, self.std_θ, optimize_mode="EM",
+                self.std_noise, self.mean_θ, self.std_θ, optimize_mode="Simple",
                 em_loop_num=5,
                 maxiter=512, regularization=True)
 

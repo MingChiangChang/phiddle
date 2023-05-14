@@ -9,7 +9,6 @@ from matplotlib.backends.backend_qtagg import (        FigureCanvasQTAgg,
         NavigationToolbar2QT as NavigationToolbar,
 )
 from matplotlib.figure import Figure
-import h5py
 
 
 class CIFView(QWidget):

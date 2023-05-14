@@ -91,6 +91,7 @@ class stripeview(FigureCanvasQTAgg):
             self.spectra.clear()
             self.spectra.plot(self.q, self.avg_pattern, color='r', label="XRD")
             self.spectra.set_xlim((self.q[0], self.q[-1]))
+            self.spectra.set_ylabel("Avg intensity (a.u.)")
             self.spectra.legend()
 
             self.draw()

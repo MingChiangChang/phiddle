@@ -21,6 +21,7 @@ from stripeview import stripeview
 from globalview import globalview
 from labeling_engine import labeler
 from cif_view import CIFView
+from phase_diagram_view import PhaseDiagramView
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
@@ -44,6 +45,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
               self.model.labeled_x, self.model.labeled_y,
               self.model.current_x, self.model.current_y
         )
+        self.phase_diagram_view = PhaseDiagramView()
 
         self.globalview.picked.connect(self.update)
         self.cifview.checked.connect(self.update_sticks)
@@ -91,8 +93,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.globalview)
         layout.addLayout(button_layout)
 
-        FPLayout = QHBoxLayout()
-
         outer_layout = QHBoxLayout()
         outer_layout.addLayout(layout)
         outer_layout.addWidget(self.cifview)
@@ -101,20 +101,19 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         widget = QWidget()
         widget.setLayout(outer_layout)
-        #tab2 = QWidget()
-        #self.tabs = QTabWidget()
-        #self.tabs.addTab(widget, "Tab 1")
-        #self.tabs.addTab(tab2, "Tab 2")
-        self.setCentralWidget(widget)#self.tabs)
+        tab2 = self.phase_diagram_view#QWidget()
+        self.tabs = QTabWidget()
+        self.tabs.addTab(widget, "Labeler")
+        self.tabs.addTab(tab2, "Phase Map")
+        self.tabs.currentChanged.connect(self.update_pd_tab)
+        self.setCentralWidget(self.tabs)
 
     def browse_button_clicked(self):
         self.file_name, _ = QFileDialog.getOpenFileName(None, "Open", "", "")
-        print(self.file_name)
-        #if self.file_name[0] != '':
-        #    self.FPLineEdit.setText(self.file_name[0])
-        self.model = datamodel(self.file_name)
-        self.ind = 0
-        self.update(self.ind)
+        if self.filename.endswith("h5"):
+            self.model = datamodel(self.file_name)
+            self.ind = 0
+            self.update(self.ind)
 
     def browse_cif_button_clicked(self):
         #self.cif_dir_name = QFileDialog.getExistingDirectory(self, "Select Directory") 
@@ -150,11 +149,14 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 phases[name] = sticks 
         self.stripeview.plot_cifs(phases)
         
+    def update_pd_tab(self, tab_num):
+        if tab_num == 1:
+            self.phase_diagram_view.plot(self.model.get_dict_for_phase_diagram())
 
     def label_button_clicked(self):
-        #result = self.labeler.fit(self.stripeview.q, self.stripeview.avg_pattern)
-        #self.stripeview.replot_spectra(result)  
-        pass
+        result = self.labeler.fit(self.stripeview.q, self.stripeview.avg_pattern)
+        self.stripeview.replot_spectra(result)  
+        #pass
 
     def save_button_clicked(self):
         filename = self.model.current_filename
@@ -189,7 +191,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                              self.model.labeled_x, self.model.labeled_y,
                              self.model.current_x, self.model.current_y)
         existing_phase_ind = index_phase(self.model.phases[new_ind], self.labeler.phase_names) 
-        print(existing_phase_ind)
+        
         if existing_phase_ind:
             self.cifview.clear()
             self.cifview.check_boxes(existing_phase_ind)
@@ -198,7 +200,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
-    w = 2280; h = 1520
+    w = 1920; h = 1080
     window = TopLevelWindow()
     window.resize(w, h)
     window.show()

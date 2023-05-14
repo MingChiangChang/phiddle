@@ -34,13 +34,25 @@ class datamodel():
 
     def add_to_phase_diagram(self, phase_names):
         self.phases[self._ind] = phase_names
-        print(self.phases)
 
     def __getitem__(self, ind):
        data = self.data[self.conds[ind]]
        return data
 
+    def get_dict_for_phase_diagram(self):
 
+        phase_dict = {} 
+        for idx, phases in enumerate(self.phases):
+            if phases:
+                for phase in phases:
+                    if phase not in phase_dict:
+                        phase_dict[phase] = {}
+                        phase_dict[phase]['dwell'] = []
+                        phase_dict[phase]['tpeak'] = []
+                    phase_dict[phase]['dwell'].append(self.dwells[idx]) 
+                    phase_dict[phase]['tpeak'].append(self.tpeaks[idx])
+        print(phase_dict)
+        return phase_dict
 
     @property
     def labeled(self):
