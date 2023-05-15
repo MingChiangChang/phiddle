@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import json
 
 import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
@@ -21,17 +22,20 @@ from stripeview import stripeview
 from globalview import globalview
 from labeling_engine import labeler
 from cif_view import CIFView
-from phase_diagram_view import PhaseDiagramView
+from phase_diagram import PhaseDiagramView, PhaseDiagramList
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, h5_path = "data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
+                 cif_path = "/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv" ):
         super().__init__()
         # Temperature fixed
         self.stripeview = stripeview()
         self.globalview = globalview()
-        self.model = datamodel("data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5") 
-        self.labeler = labeler("/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv")
+        self.h5_path = h5_path
+        self.cif_path = cif_path
+        self.model = datamodel(self.h5_path) 
+        self.labeler = labeler(self.cif_path)
         self.cifview = CIFView([phase.name for phase in self.labeler.phases])
 
         self.ind = 0
@@ -45,11 +49,19 @@ class TopLevelWindow(QtWidgets.QMainWindow):
               self.model.labeled_x, self.model.labeled_y,
               self.model.current_x, self.model.current_y
         )
+
         self.phase_diagram_view = PhaseDiagramView()
+        self.phase_diagram_list = PhaseDiagramList()
+        pd_layout = QHBoxLayout()
+        pd_layout.addWidget(self.phase_diagram_view)
+        pd_layout.addWidget(self.phase_diagram_list)
+        pd_layout.setStretch(0, 3)
+        pd_layout.setStretch(1, 1)
 
         self.globalview.picked.connect(self.update)
         self.cifview.checked.connect(self.update_sticks)
         self.cifview.add.connect(self.add_to_phase_diagram)
+        self.phase_diagram_list.checked.connect(self.update_pd_plot) # FIXME
 
         label_button = QPushButton()
         label_button.setText("Label")
@@ -74,10 +86,21 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         browse_cif_button = QPushButton()
         browse_cif_button.setText("Browse CIF directory")
         browse_cif_button.clicked.connect(self.browse_cif_button_clicked)
-        
+ 
+        save_progress_button = QPushButton()
+        save_progress_button.setText("Save Progress")
+        save_progress_button.clicked.connect(self.save_progress_clicked)
+
+        load_progress_button = QPushButton()
+        load_progress_button.setText("Load Progress")
+        load_progress_button.clicked.connect(self.load_progress_clicked)
+
+       
         browse_button_layout = QHBoxLayout()
         browse_button_layout.addWidget(browse_button)
         browse_button_layout.addWidget(browse_cif_button)
+        browse_button_layout.addWidget(save_progress_button)
+        browse_button_layout.addWidget(load_progress_button)
 
 
         button_layout = QHBoxLayout()
@@ -86,25 +109,26 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         button_layout.addWidget(back_button)
         button_layout.addWidget(next_button)
 
-        layout = QVBoxLayout()
-        layout.addLayout(browse_button_layout)
-        layout.addWidget(browse_button)
-        layout.addWidget(self.stripeview)
-        layout.addWidget(self.globalview)
-        layout.addLayout(button_layout)
+        main_fig_layout = QVBoxLayout()
+        main_fig_layout.addLayout(browse_button_layout)
+        main_fig_layout.addWidget(browse_button)
+        main_fig_layout.addWidget(self.stripeview)
+        main_fig_layout.addWidget(self.globalview)
+        main_fig_layout.addLayout(button_layout)
 
         outer_layout = QHBoxLayout()
-        outer_layout.addLayout(layout)
+        outer_layout.addLayout(main_fig_layout)
         outer_layout.addWidget(self.cifview)
         outer_layout.setStretch(0, 3)
         outer_layout.setStretch(1, 1)
 
         widget = QWidget()
         widget.setLayout(outer_layout)
-        tab2 = self.phase_diagram_view#QWidget()
+        pd_widget = QWidget()
+        pd_widget.setLayout(pd_layout)
         self.tabs = QTabWidget()
         self.tabs.addTab(widget, "Labeler")
-        self.tabs.addTab(tab2, "Phase Map")
+        self.tabs.addTab(pd_widget, "Phase Map")
         self.tabs.currentChanged.connect(self.update_pd_tab)
         self.setCentralWidget(self.tabs)
 
@@ -120,20 +144,29 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.cif_csv_fn, _ = QFileDialog.getOpenFileName(None, "Open", "", "")
         self.labeler = labeler(self.cif_csv_fn)
 
+    def save_progress_clicked(self):
+        self.save_fn, _ = QFileDialog.getSaveFileName(self, 'Save File', "", "JSON Files (*.json)")
+        storing_ds = {}
+        storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
+        storing_ds["phases"] = self.model.phases
+        storing_ds["cif_path"] = self.cif_path
+        storing_ds["h5_path"] = self.h5_path
+        with open(self.save_fn, 'w') as f:
+            json.dump(storing_ds, f)
 
+    def load_progress_clicked(self):
+        self.load_fn, _ = QFileDialog.getOpenFileName(None, "Open", "", "JSON Files (*.json)")
+        with open(self.load_fn, 'r') as f:
+            load_meta_data = json.load(f)
+
+        self.model = datamodel(load_meta_data["h5_path"])
+        self.labeler = labeler(load_meta_data["cif_path"])
+        self.model.phases = load_meta_data["phases"]
+        self.ind = 0
+
+        
     def update(self, ind):    
         self.ind = ind
-        #self.model.ind = ind
-        #self.stripeview.clear_figures()
-        #self.stripeview.avg_pattern = None
-        #self.stripeview.plot(self.model.current_data)
-        #self.globalview.clear_figures()
-        #self.globalview.plot(self.model.dwells, self.model.tpeaks,
-        #                     self.model.labeled_dwells, self.model.labeled_tpeaks,
-        #                     self.model.current_dwell, self.model.current_tpeak,
-        #                     self.model.x, self.model.y,
-        #                     self.model.labeled_x, self.model.labeled_y, 
-        #                     self.model.current_x, self.model.current_y)
 
     def update_sticks(self, isChecked_list):
         phases = {}
@@ -151,7 +184,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         
     def update_pd_tab(self, tab_num):
         if tab_num == 1:
-            self.phase_diagram_view.plot(self.model.get_dict_for_phase_diagram())
+            phase_dict = self.model.get_dict_for_phase_diagram()
+            self.phase_diagram_view.plot(phase_dict)
+            self.phase_diagram_list.show(list(phase_dict))
+
+    def update_pd_plot(self, mask):
+        phase_dict = self.model.get_dict_for_phase_diagram()
+        self.phase_diagram_view.plot(phase_dict, mask)
 
     def label_button_clicked(self):
         result = self.labeler.fit(self.stripeview.q, self.stripeview.avg_pattern)
@@ -161,7 +200,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def save_button_clicked(self):
         filename = self.model.current_filename
         d = np.vstack((self.stripeview.q, self.stripeview.avg_pattern))
-        np.save(filename, d)
+        fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
+        np.save(fn, d)
 
     def change_ind(self, change):
         self.ind += change
@@ -169,7 +209,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def add_to_phase_diagram(self, isChecked_list):
         phase_names = self.labeler.get_phase_names(isChecked_list)
         self.model.add_to_phase_diagram(phase_names)
-        self.update(self.ind)
+        #self.update(self.ind)
 
     @property
     def ind(self):
@@ -177,6 +217,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     @ind.setter
     def ind(self, new_ind):
+        if new_ind >= self.model.size: 
+            new_ind = 0 
         self.model.ind = new_ind
         self._ind = self.model.ind # let model do the cycling
 

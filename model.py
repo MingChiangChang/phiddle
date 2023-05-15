@@ -14,6 +14,7 @@ class datamodel():
             self._ind = 0
             self.conds = sorted(list(self.h5))
             self.data = collect_data_and_q(self.h5, self.conds)
+            self.size = len(self.conds)
 
             self.dwells, self.tpeaks = collect_conditions(list(self.h5)) 
             self.current_dwell, self.current_tpeak = get_condition(self.conds[self._ind])
@@ -24,8 +25,6 @@ class datamodel():
             self.data = np.load(file_path)
             self.q = np.load(q_path)
             
-        # TODO: initiate phase diagram
-        # First only supports center phase labeling
         self.phases = ["" for i in range(len(self.conds))]
 
     #@Slot(int)
@@ -51,8 +50,8 @@ class datamodel():
                         phase_dict[phase]['tpeak'] = []
                     phase_dict[phase]['dwell'].append(self.dwells[idx]) 
                     phase_dict[phase]['tpeak'].append(self.tpeaks[idx])
-        print(phase_dict)
         return phase_dict
+
 
     @property
     def labeled(self):
