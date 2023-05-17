@@ -21,21 +21,35 @@ class CIFView(QWidget):
 
         super(CIFView, self).__init__(parent)
 
-        layout = QVBoxLayout()
+        self.layout = QVBoxLayout()
 
         self.widget_ls = []
-        button = QPushButton()
-        button.setText("Add to phase diagram")
-        button.clicked.connect(self.add_to_phase_diagram)
+        self.button = QPushButton()
+        self.button.setText("Add to phase diagram")
+        self.button.clicked.connect(self.add_to_phase_diagram)
         for cif in cif_list:
             checkbox = QCheckBox(cif)
             checkbox.clicked.connect(self.update_stick_pattern)
             self.widget_ls.append(checkbox)
-            layout.addWidget(checkbox) 
+            self.layout.addWidget(checkbox) 
 
-        layout.addWidget(button)
-        self.setLayout(layout)
+        self.layout.addWidget(self.button)
+        self.setLayout(self.layout)
 
+    def update_cif_list(self, cif_list):
+        """ Reuse checkboxes  """
+        self.layout.removeWidget(self.button)
+        for idx, cif in enumerate(cif_list):
+            if idx >= len(self.widget_ls):
+                checkbox = QCheckBox(cif)
+                checkbox.clicked.connect(self.update_stick_pattern)
+                self.widget_ls.append(checkbox)
+                self.layout.addWidget(checkbox)
+            else:
+                checkbox = self.widget_ls[idx]
+                checkbox.setText(cif)
+        self.layout.addWidget(self.button) 
+        self.clear()
 
     def update_stick_pattern(self):
         self.checked.emit([checkbox.isChecked() for checkbox in self.widget_ls])

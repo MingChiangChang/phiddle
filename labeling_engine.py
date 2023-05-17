@@ -42,4 +42,12 @@ class labeler():
     def get_phase_names(self, isChecked_ls):
         return [self.phases[idx].name for idx, check in enumerate(isChecked_ls)
                                         if check]
+    @property
+    def hyperparams(self):
+        return self.std_noise, self.mean_θ, self.std_θ
 
+    def set_hyperparams(self, std_noise, mean, std):
+        self.std_noise = std_noise
+        self.mean_θ = mean
+        self.std_θ = std
+        print(self.std_noise, self.mean_θ, self.std_θ)

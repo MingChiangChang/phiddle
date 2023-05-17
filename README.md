@@ -8,7 +8,7 @@
 - [ ] Add amorphous option
 - [ ] Find out why labeling is so slow
 - [ ] Allow changing in Q range
-- [ ] Advance setting tab for labeler (jump out window?)
+- [x] Advance setting tab for labeler (jump out window?)
 
 # Next level
 - [ ] Transfer learning model for clustering

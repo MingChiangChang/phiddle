@@ -42,17 +42,17 @@ class globalview(FigureCanvasQTAgg):
              current_x, current_y): # This shows that this should be separated ..
         self.clear_figures()
 
-        self.condition_artist = self.condition_map.scatter(dwells, tpeaks, color='b', s=5, picker=True)
-        self.condition_map.scatter(labeled_dwells, labeled_tpeaks, s=5,
+        self.condition_artist = self.condition_map.scatter(dwells, tpeaks, color='b', s=8, picker=True)
+        self.condition_map.scatter(labeled_dwells, labeled_tpeaks, s=8,
                                    color='g', picker=0.),
-        self.condition_map.scatter(current_dwell, current_tpeak, s=5, color='r', picker=0.)
+        self.condition_map.scatter(current_dwell, current_tpeak, s=8, color='r', picker=0.)
         self.condition_map.set_xscale("log")
         self.condition_map.set_xlabel("Dwell (us)")
         self.condition_map.set_ylabel("Peak temperature ($^oC$)")
 
-        self.location_artist = self.wafer_map.scatter(x, y, color='b', s=5, picker=True)
-        self.wafer_map.scatter(labeled_x, labeled_y, s=5, color='g', picker=0.)
-        self.wafer_map.scatter(current_x, current_y, s=5, color='r', picker=0.)
+        self.location_artist = self.wafer_map.scatter(x, y, color='b', s=8, picker=True)
+        self.wafer_map.scatter(labeled_x, labeled_y, s=8, color='g', picker=0.)
+        self.wafer_map.scatter(current_x, current_y, s=8, color='r', picker=0.)
         self.wafer_map.set_xlabel("x (mm)")
         self.wafer_map.set_ylabel("y (mm)")
 

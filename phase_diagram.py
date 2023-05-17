@@ -76,7 +76,7 @@ class PhaseDiagramList(QWidget):
                 checkbox.setText(phase)
             checkbox.setChecked(True)
 
-        if len(phase) > len(self.widget_ls):
+        if len(phases) > len(self.widget_ls):
             for i in range(len(phase),len(self.widget_ls)):
                 self.layout.removeWidget(self.widget_ls[i])
                 del self.widget_ls[i]

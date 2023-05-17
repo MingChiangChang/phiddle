@@ -23,6 +23,7 @@ from globalview import globalview
 from labeling_engine import labeler
 from cif_view import CIFView
 from phase_diagram import PhaseDiagramView, PhaseDiagramList
+from popup import Popup
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
@@ -37,6 +38,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.model = datamodel(self.h5_path) 
         self.labeler = labeler(self.cif_path)
         self.cifview = CIFView([phase.name for phase in self.labeler.phases])
+        self.popup = Popup() 
 
         self.ind = 0
         self.update(self.ind)
@@ -62,6 +64,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.cifview.checked.connect(self.update_sticks)
         self.cifview.add.connect(self.add_to_phase_diagram)
         self.phase_diagram_list.checked.connect(self.update_pd_plot) # FIXME
+        self.popup.set_clicked.connect(self.update_labeler_hyperparams)
 
         label_button = QPushButton()
         label_button.setText("Label")
@@ -95,12 +98,16 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         load_progress_button.setText("Load Progress")
         load_progress_button.clicked.connect(self.load_progress_clicked)
 
+        labeler_setting_button = QPushButton()
+        labeler_setting_button.setText("Labeler Settings")
+        labeler_setting_button.clicked.connect(self.labeler_setting_clicked)
        
         browse_button_layout = QHBoxLayout()
         browse_button_layout.addWidget(browse_button)
         browse_button_layout.addWidget(browse_cif_button)
         browse_button_layout.addWidget(save_progress_button)
         browse_button_layout.addWidget(load_progress_button)
+        browse_button_layout.addWidget(labeler_setting_button)
 
 
         button_layout = QHBoxLayout()
@@ -134,7 +141,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def browse_button_clicked(self):
         self.file_name, _ = QFileDialog.getOpenFileName(None, "Open", "", "")
-        if self.filename.endswith("h5"):
+        if self.file_name.endswith("h5"):
             self.model = datamodel(self.file_name)
             self.ind = 0
             self.update(self.ind)
@@ -142,7 +149,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def browse_cif_button_clicked(self):
         #self.cif_dir_name = QFileDialog.getExistingDirectory(self, "Select Directory") 
         self.cif_csv_fn, _ = QFileDialog.getOpenFileName(None, "Open", "", "")
-        self.labeler = labeler(self.cif_csv_fn)
+        if self.cif_csv_fn.endswith("csv"):
+            self.labeler = labeler(self.cif_csv_fn)
+            self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
 
     def save_progress_clicked(self):
         self.save_fn, _ = QFileDialog.getSaveFileName(self, 'Save File', "", "JSON Files (*.json)")
@@ -156,14 +165,18 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def load_progress_clicked(self):
         self.load_fn, _ = QFileDialog.getOpenFileName(None, "Open", "", "JSON Files (*.json)")
-        with open(self.load_fn, 'r') as f:
-            load_meta_data = json.load(f)
+        if self.load_fn.endswith(".json"):
+            with open(self.load_fn, 'r') as f:
+                load_meta_data = json.load(f)
 
-        self.model = datamodel(load_meta_data["h5_path"])
-        self.labeler = labeler(load_meta_data["cif_path"])
-        self.model.phases = load_meta_data["phases"]
-        self.ind = 0
+            self.model = datamodel(load_meta_data["h5_path"])
+            self.labeler = labeler(load_meta_data["cif_path"])
+            self.model.phases = load_meta_data["phases"]
+            self.ind = 0
 
+    def labeler_setting_clicked(self):
+        self.popup.set_default_text(*self.labeler.hyperparams)
+        self.popup.show()
         
     def update(self, ind):    
         self.ind = ind
@@ -210,6 +223,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         phase_names = self.labeler.get_phase_names(isChecked_list)
         self.model.add_to_phase_diagram(phase_names)
         #self.update(self.ind)
+
+    def update_labeler_hyperparams(self, std_noise, mean, std):
+        self.labeler.set_hyperparams(std_noise, mean, std) 
 
     @property
     def ind(self):
