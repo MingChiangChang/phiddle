@@ -3,7 +3,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
       QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
-      QCheckBox
+      QCheckBox, QFileDialog
       )
 from matplotlib.backends.backend_qtagg import (        FigureCanvasQTAgg,
         NavigationToolbar2QT as NavigationToolbar,
@@ -50,17 +50,29 @@ class PhaseDiagramView(FigureCanvasQTAgg):
         self.phase_diagram.legend()
         self.draw()     
 
+    def save_phase_diagram(self):
+        fn, _ = QFileDialog.getSaveFileName(self, 'Save Phase Diagram', "", "")
+        self.phase_diagram.figure.savefig(fn)
+
 
 class PhaseDiagramList(QWidget):
 
     checked = pyqtSignal(list)
+    save = pyqtSignal()
 
     def __init__(self, parent=None):
 
         super(PhaseDiagramList, self).__init__(parent)
 
+        self.save_button = QPushButton()
+        self.save_button.setText("Save Phase Diagram")
+        self.save_button.clicked.connect(lambda: self.save.emit())
+
+        self.outer_layout = QVBoxLayout()
         self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
+        self.outer_layout.addLayout(self.layout)
+        self.outer_layout.addWidget(self.save_button)
+        self.setLayout(self.outer_layout)
         self.widget_ls = []
 
     def show(self, phases):
@@ -84,4 +96,3 @@ class PhaseDiagramList(QWidget):
 
     def update_phase_diagram(self):
         self.checked.emit([checkbox.isChecked() for checkbox in self.widget_ls])
-

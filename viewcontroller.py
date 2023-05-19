@@ -62,6 +62,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.phase_diagram_view = PhaseDiagramView()
         self.phase_diagram_list = PhaseDiagramList()
+        self.phase_diagram_list.save.connect(self.phase_diagram_view.save_phase_diagram)
         pd_layout = QHBoxLayout()
         pd_layout.addWidget(self.phase_diagram_view)
         pd_layout.addWidget(self.phase_diagram_list)
