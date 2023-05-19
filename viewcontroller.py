@@ -79,6 +79,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         label_button.setText("Label")
         label_button.clicked.connect(self.label_button_clicked)
 
+        label_w_phase_button = QPushButton()
+        label_w_phase_button.setText("Fit With Phase")
+        label_w_phase_button.clicked.connect(self.label_w_phase_button_clicked)
+
         save_button = QPushButton()
         save_button.setText("Save")
         save_button.clicked.connect(self.save_button_clicked)
@@ -90,6 +94,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         next_button = QPushButton()
         next_button.setText("Next")
         next_button.clicked.connect(lambda: self.change_ind(1))
+
 
         browse_button = QPushButton()
         browse_button.setText("Browse data file")
@@ -110,27 +115,38 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         labeler_setting_button = QPushButton()
         labeler_setting_button.setText("Labeler Settings")
         labeler_setting_button.clicked.connect(self.labeler_setting_clicked)
-       
-        browse_button_layout = QHBoxLayout()
-        browse_button_layout.addWidget(browse_button)
-        browse_button_layout.addWidget(browse_cif_button)
-        browse_button_layout.addWidget(save_progress_button)
-        browse_button_layout.addWidget(load_progress_button)
-        browse_button_layout.addWidget(labeler_setting_button)
+      
+        previous_label_result_button = QPushButton()
+        previous_label_result_button.setText("Previous Label Result")
+        previous_label_result_button.clicked.connect(self.previous_label_result)
+
+        next_label_result_button = QPushButton()
+        next_label_result_button.setText("Next Label Result")
+        next_label_result_button.clicked.connect(self.next_label_result) 
 
 
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(label_button)
-        button_layout.addWidget(save_button)
-        button_layout.addWidget(back_button)
-        button_layout.addWidget(next_button)
+        top_button_layout = QHBoxLayout()
+        top_button_layout.addWidget(browse_button)
+        top_button_layout.addWidget(browse_cif_button)
+        top_button_layout.addWidget(save_progress_button)
+        top_button_layout.addWidget(load_progress_button)
+        top_button_layout.addWidget(labeler_setting_button)
+        top_button_layout.addWidget(previous_label_result_button)
+        top_button_layout.addWidget(next_label_result_button)
+
+
+        bottom_button_layout = QHBoxLayout()
+        bottom_button_layout.addWidget(label_button)
+        bottom_button_layout.addWidget(label_w_phase_button)
+        bottom_button_layout.addWidget(save_button)
+        bottom_button_layout.addWidget(back_button)
+        bottom_button_layout.addWidget(next_button)
 
         main_fig_layout = QVBoxLayout()
-        main_fig_layout.addLayout(browse_button_layout)
-        main_fig_layout.addWidget(browse_button)
+        main_fig_layout.addLayout(top_button_layout)
         main_fig_layout.addWidget(self.stripeview)
         main_fig_layout.addWidget(self.globalview)
-        main_fig_layout.addLayout(button_layout)
+        main_fig_layout.addLayout(bottom_button_layout)
 
         outer_layout = QHBoxLayout()
         outer_layout.addLayout(main_fig_layout)
@@ -216,9 +232,16 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.phase_diagram_view.plot(phase_dict, mask)
 
     def label_button_clicked(self):
-        result, bg = self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
-        self.stripeview.replot_spectra(result, bg)  
-        #pass
+        self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
+        self.stripeview.plot_label_result_w_spectra(1, self.labeler.results[0], self.labeler.bg)  
+
+    def label_w_phase_button_clicked(self):
+        selected_phase_names = self.cifview.get_checked_phase_names()
+        if selected_phase_names:
+            self.labeler.fit_phases(self.stripeview.avg_q, 
+                                    self.stripeview.avg_pattern,
+                                    selected_phase_names)
+            self.stripeview.plot_label_result_w_spectra(1, self.labeler.results[0], self.labeler.bg)
 
     def save_button_clicked(self):
         filename = self.model.current_filename
@@ -235,9 +258,22 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         #self.update(self.ind)
 
     def update_labeler_hyperparams(self, std_noise, mean, std, max_phase, expand_degree,
-                                   background_length, max_iter):
+                                   background_length, max_iter,
+                                   optimize_mode, background_option):
         self.labeler.set_hyperparams(std_noise, mean, std, max_phase, expand_degree,
-                                    background_length, max_iter) 
+                                    background_length, max_iter, optimize_mode,
+                                     background_option) 
+
+    def next_label_result(self):
+        if self.labeler.has_labeled: 
+            ind, result, bg = self.labeler.next_label_result()
+            self.stripeview.plot_label_result_w_spectra(ind, result, bg)
+
+    def previous_label_result(self):
+        if self.labeler.has_labeled:
+            ind, result, bg = self.labeler.previous_label_result()
+            self.stripeview.plot_label_result_w_spectra(ind, result, bg)
+
 
     @property
     def ind(self):
@@ -247,8 +283,11 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def ind(self, new_ind):
         if new_ind >= self.model.size: 
             new_ind = 0 
+        elif new_ind < 0:
+            new_ind = self.model.size-1
         self.model.ind = new_ind
         self._ind = self.model.ind # let model do the cycling
+        self.labeler.has_labeled = False
 
         self.stripeview.avg_pattern = None # Not good
         self.stripeview.clear_figures()

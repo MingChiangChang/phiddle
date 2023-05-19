@@ -77,3 +77,7 @@ class CIFView(QWidget):
             self.widget_ls[ind].setChecked(True)
         self.update_stick_pattern()
 
+    def get_checked_phase_names(self):
+        return [checkbox.text() for checkbox in self.widget_ls 
+                  if checkbox.isChecked()
+                    if checkbox.text() != "Amorphous"]

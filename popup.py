@@ -4,12 +4,12 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
         QWidget, QVBoxLayout, QGridLayout, QPushButton, QHBoxLayout, QLineEdit,
-        QLabel
+        QLabel, QComboBox
         )
 
 class Popup(QWidget):
 
-    set_clicked = pyqtSignal(float, list, list, int, int, float, int)
+    set_clicked = pyqtSignal(float, list, list, int, int, float, int, str, str)
 
     def __init__(self, parent=None):
 
@@ -48,6 +48,17 @@ class Popup(QWidget):
         self.max_iter_prompt.setText("Max Iterations")
         self.max_iter_edit = QLineEdit()
 
+        self.optimize_mode_prompt = QLabel()
+        self.optimize_mode_prompt.setText("Optimize Mode")
+        self.optimize_mode_dropdown = QComboBox()
+        self.optimize_mode_options = ["Simple", "EM"]
+        self.optimize_mode_dropdown.addItems(self.optimize_mode_options) 
+
+        self.background_option_prompt = QLabel()
+        self.background_option_prompt.setText("Background option")
+        self.background_dropdown = QComboBox()
+        self.background_options = ["MCBL", "Default", "None"]
+        self.background_dropdown.addItems(self.background_options)
 
         grid_layout.addWidget(self.std_noise_prompt, 0, 0)
         grid_layout.addWidget(self.std_noise_edit, 0, 1)
@@ -67,6 +78,10 @@ class Popup(QWidget):
         grid_layout.addWidget(self.background_length_edit, 5, 1)
         grid_layout.addWidget(self.max_iter_prompt, 6, 0)
         grid_layout.addWidget(self.max_iter_edit, 6, 1)
+        grid_layout.addWidget(self.optimize_mode_prompt, 3, 2)
+        grid_layout.addWidget(self.optimize_mode_dropdown, 3, 3)
+        grid_layout.addWidget(self.background_option_prompt, 4, 2)
+        grid_layout.addWidget(self.background_dropdown, 4, 3)
 
         set_button = QPushButton()
         set_button.setText("Set")
@@ -83,7 +98,8 @@ class Popup(QWidget):
 
     def set_default_text(self, std_noise: float, mean: list, std: list,
                          max_phase: int, expand_degree: int,
-                         background_length: float, max_iter: int):
+                         background_length: float, max_iter: int, 
+                         optimize_mode: str, background_option: str):
         self.std_noise_edit.setText(str(std_noise))
         self.mean_0_edit.setText(str(mean[0]))
         self.mean_1_edit.setText(str(mean[1]))
@@ -95,6 +111,14 @@ class Popup(QWidget):
         self.expand_degree_edit.setText(str(expand_degree))
         self.background_length_edit.setText(str(background_length))
         self.max_iter_edit.setText(str(max_iter))
+
+        self.optimize_mode_dropdown.setCurrentIndex(
+                self.optimize_mode_options.index(optimize_mode)
+                )
+        self.background_dropdown.setCurrentIndex(
+                self.background_options.index(background_option)
+                )
+                                                      
 
     def set_button_clicked(self):
         try:
@@ -109,6 +133,8 @@ class Popup(QWidget):
             expand_degree = int(self.expand_degree_edit.text())
             background_length = float(self.background_length_edit.text())
             max_iter = int(self.max_iter_edit.text())
+            optimize_mode = self.optimize_mode_dropdown.currentText()
+            background_option = self.background_dropdown.currentText()
 
             self.set_clicked.emit(std_noise,
                                   [mean_0, mean_1, mean_2],
@@ -116,7 +142,9 @@ class Popup(QWidget):
                                   max_phase,
                                   expand_degree,
                                   background_length,
-                                  max_iter)
+                                  max_iter,
+                                  optimize_mode,
+                                  background_option)
             self.close()
         except ValueError:
             print("The value cannot be convert to numbers.")

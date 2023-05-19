@@ -207,23 +207,28 @@ class stripeview(FigureCanvasQTAgg):
 
         self.draw()
 
-    def plot_fit_result(self, fit_result, bg=None):
-        fit = evaluate_obj(fit_result.phase_model, self.avg_q)
+    def plot_fit_result(self, ind, fit_result, bg=None):
+        try:
+            fit_phase_model = fit_result.phase_model 
+        except AttributeError:
+            fit_phase_model = fit_result
+            
+        fit = evaluate_obj(fit_phase_model, self.avg_q)
 
         phase_name = []
-        if bg is not None:
+        if np.sum(bg) != 0.:
             fit += bg
         else:
-            bg = evaluate_obj(fit_result.phase_model.background, self.avg_q)
+            bg = evaluate_obj(fit_phase_model.background, self.avg_q)
 
         self.spectra.plot(self.avg_q, fit, label="Fitted")
         self.spectra.plot(self.avg_q, bg, label="background")
 
-        for cp in fit_result.phase_model.CPs:
+        for cp in fit_phase_model.CPs:
             self.spectra.plot(self.avg_q, evaluate_obj(cp, self.avg_q), label=cp.name)
             phase_name.append(cp.name)
 
-        self.spectra.set_title("_".join(phase_name))
+        self.spectra.set_title(f"No. {ind} " + ("_".join(phase_name)))
         self.spectra.legend(fontsize=7)
         self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.spectra.set_ylim((-0.1, 1.1))
@@ -233,7 +238,7 @@ class stripeview(FigureCanvasQTAgg):
         self.draw()
 
 
-    def replot_spectra(self, fit_result=None, bg=None):
+    def plot_label_result_w_spectra(self, ind, fit_result=None, bg=None):
         self.spectra.clear()
         if self.avg_pattern is None:
             self.avg_pattern = minmax_norm(self.data[:,round(self.data.shape[1]/2)])
@@ -243,7 +248,7 @@ class stripeview(FigureCanvasQTAgg):
         (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x,
                                                         self.spectra_box_y, color='r')
 
-        self.plot_fit_result(fit_result, bg)
+        self.plot_fit_result(ind, fit_result, bg)
 
 
     def plot_cifs(self, sticks):
