@@ -32,6 +32,9 @@ class CIFView(QWidget):
             checkbox.clicked.connect(self.update_stick_pattern)
             self.widget_ls.append(checkbox)
             self.layout.addWidget(checkbox) 
+        self.amorphous_checkbox = QCheckBox("Amorphous")
+        self.widget_ls.append(self.amorphous_checkbox) # Should not let amorphous
+        self.layout.addWidget(self.amorphous_checkbox) # Be hidden in the list
 
         self.layout.addWidget(self.button)
         self.setLayout(self.layout)
@@ -39,6 +42,8 @@ class CIFView(QWidget):
     def update_cif_list(self, cif_list):
         """ Reuse checkboxes  """
         self.layout.removeWidget(self.button)
+        self.layout.removeWidget(self.amorphous_checkbox)
+        del self.widget_ls[-1] # amorphous checkbox is always the last one
         for idx, cif in enumerate(cif_list):
             if idx >= len(self.widget_ls):
                 checkbox = QCheckBox(cif)
@@ -48,11 +53,14 @@ class CIFView(QWidget):
             else:
                 checkbox = self.widget_ls[idx]
                 checkbox.setText(cif)
+        self.widget_ls.append(self.amorphous_checkbox)
+        self.layout.addWidget(self.amorphous_checkbox)
         self.layout.addWidget(self.button) 
         self.clear()
 
+
     def update_stick_pattern(self):
-        self.checked.emit([checkbox.isChecked() for checkbox in self.widget_ls])
+        self.checked.emit([checkbox.isChecked() for checkbox in self.widget_ls[:-1]])
 
 
     def add_to_phase_diagram(self):
@@ -68,8 +76,4 @@ class CIFView(QWidget):
         for ind in ind_ls:
             self.widget_ls[ind].setChecked(True)
         self.update_stick_pattern()
-
-
-
-
 

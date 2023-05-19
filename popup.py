@@ -72,9 +72,9 @@ class Popup(QWidget):
             mean_0 = float(self.mean_0_edit.text())
             mean_1 = float(self.mean_1_edit.text())
             mean_2 = float(self.mean_2_edit.text())
-            std_0 = float(self.mean_0_edit.text())
-            std_1 = float(self.mean_1_edit.text())
-            std_2 = float(self.mean_2_edit.text())
+            std_0 = float(self.std_0_edit.text())
+            std_1 = float(self.std_1_edit.text())
+            std_2 = float(self.std_2_edit.text())
 
             self.set_clicked.emit(std_noise,
                                   [mean_0, mean_1, mean_2],

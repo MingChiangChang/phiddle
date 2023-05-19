@@ -27,30 +27,38 @@ from popup import Popup
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
-    def __init__(self, h5_path = "data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
+    def __init__(self,
+                 h5_path = "data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
                  cif_path = "/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv" ):
         super().__init__()
         # Temperature fixed
         self.stripeview = stripeview()
         self.globalview = globalview()
+        #self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
+        #if self.h5_path.endswith("h5"):
+        #    self.model = datamodel(self.h5_path)
         self.h5_path = h5_path
         self.cif_path = cif_path
-        self.model = datamodel(self.h5_path) 
-        self.labeler = labeler(self.cif_path)
-        self.cifview = CIFView([phase.name for phase in self.labeler.phases])
+        #self.cif_path, _ = QFileDialog.getOpenFileName(None, "Open cif", "", "")
+        #if self.cif_path.endswith("csv"):
+        #    self.labeler = labeler(self.cif_path)
+        #self.model = datamodel(self.h5_path) 
+        #self.labeler = labeler(self.cif_path)
+        #self.cifview = CIFView([phase.name for phase in self.labeler.phases])
+        self.model = datamodel()
+        self.labeler = labeler()
+        self.cifview = CIFView([])
         self.popup = Popup() 
 
-        self.ind = 0
-        self.update(self.ind)
-        self.stripeview.plot(self.model[self.ind])
-        self.globalview.plot(
-              self.model.dwells, self.model.tpeaks,
-              self.model.labeled_dwells, self.model.labeled_tpeaks,
-              self.model.current_dwell, self.model.current_tpeak,
-              self.model.x, self.model.y,
-              self.model.labeled_x, self.model.labeled_y,
-              self.model.current_x, self.model.current_y
-        )
+        # For testing
+        if h5_path is not None and cif_path is not None:
+            self.model.read_h5(h5_path)
+            self.ind = 0
+            self.update(self.ind)
+            self.labeler.read_cifs(cif_path)
+            self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
+
+
 
         self.phase_diagram_view = PhaseDiagramView()
         self.phase_diagram_list = PhaseDiagramList()
@@ -139,29 +147,30 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.tabs.currentChanged.connect(self.update_pd_tab)
         self.setCentralWidget(self.tabs)
 
+
     def browse_button_clicked(self):
-        self.file_name, _ = QFileDialog.getOpenFileName(None, "Open", "", "")
-        if self.file_name.endswith("h5"):
-            self.model = datamodel(self.file_name)
+        self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
+        if self.h5_path.endswith("h5"):
+            self.model.read_h5(self.h5_path)
             self.ind = 0
             self.update(self.ind)
 
     def browse_cif_button_clicked(self):
-        #self.cif_dir_name = QFileDialog.getExistingDirectory(self, "Select Directory") 
-        self.cif_csv_fn, _ = QFileDialog.getOpenFileName(None, "Open", "", "")
-        if self.cif_csv_fn.endswith("csv"):
-            self.labeler = labeler(self.cif_csv_fn)
+        self.cif_path, _ = QFileDialog.getOpenFileName(None, "Open cif", "", "")
+        if self.cif_path.endswith("csv"):
+            self.labeler.read_cifs(self.cif_path)
             self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
 
     def save_progress_clicked(self):
         self.save_fn, _ = QFileDialog.getSaveFileName(self, 'Save File', "", "JSON Files (*.json)")
-        storing_ds = {}
-        storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
-        storing_ds["phases"] = self.model.phases
-        storing_ds["cif_path"] = self.cif_path
-        storing_ds["h5_path"] = self.h5_path
-        with open(self.save_fn, 'w') as f:
-            json.dump(storing_ds, f)
+        if self.save_fn:
+            storing_ds = {}
+            storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
+            storing_ds["phases"] = self.model.phases
+            storing_ds["cif_path"] = self.cif_path
+            storing_ds["h5_path"] = self.h5_path
+            with open(self.save_fn, 'w') as f:
+                json.dump(storing_ds, f)
 
     def load_progress_clicked(self):
         self.load_fn, _ = QFileDialog.getOpenFileName(None, "Open", "", "JSON Files (*.json)")
@@ -169,8 +178,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             with open(self.load_fn, 'r') as f:
                 load_meta_data = json.load(f)
 
-            self.model = datamodel(load_meta_data["h5_path"])
-            self.labeler = labeler(load_meta_data["cif_path"])
+            self.model.read_h5(load_meta_data["h5_path"])
+            self.labeler.read_cifs(load_meta_data["cif_path"])
             self.model.phases = load_meta_data["phases"]
             self.ind = 0
 
@@ -206,8 +215,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.phase_diagram_view.plot(phase_dict, mask)
 
     def label_button_clicked(self):
-        result = self.labeler.fit(self.stripeview.q, self.stripeview.avg_pattern)
-        self.stripeview.replot_spectra(result)  
+        result, bg = self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
+        self.stripeview.replot_spectra(result, bg)  
         #pass
 
     def save_button_clicked(self):
@@ -240,7 +249,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.stripeview.avg_pattern = None # Not good
         self.stripeview.clear_figures()
-        self.stripeview.plot(self.model.current_data)
+        self.stripeview.plot_new_data(self.model.current_data)
         self.globalview.clear_figures()
         self.globalview.plot(self.model.dwells, self.model.tpeaks,
                              self.model.labeled_dwells, self.model.labeled_tpeaks,
@@ -248,11 +257,15 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                              self.model.x, self.model.y,
                              self.model.labeled_x, self.model.labeled_y,
                              self.model.current_x, self.model.current_y)
-        existing_phase_ind = index_phase(self.model.phases[new_ind], self.labeler.phase_names) 
+        try:
+            existing_phase_ind = index_phase(self.model.phases[new_ind], self.labeler.phase_names) 
         
-        if existing_phase_ind:
-            self.cifview.clear()
-            self.cifview.check_boxes(existing_phase_ind)
+            if existing_phase_ind:
+                self.cifview.clear()
+                self.cifview.check_boxes(existing_phase_ind)
+        except AttributeError:
+            pass
+        
 
         
 if __name__ == "__main__":

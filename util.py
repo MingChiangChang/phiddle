@@ -60,3 +60,14 @@ def index_phase(phase_names, phase_ls):
     return [idx for idx, name in enumerate(phase_ls)
                  if name in phase_names]
 
+
+def find_first_larger(arr, value):
+    for idx, val in enumerate(arr):
+        if val > value:
+            return idx
+
+
+def find_first_smaller(arr, value):
+    for idx, val in enumerate(arr[::-1]):
+        if val < value:
+            return arr.shape[0]-idx
