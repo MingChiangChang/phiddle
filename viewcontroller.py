@@ -185,7 +185,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.ind = 0
 
     def labeler_setting_clicked(self):
-        self.popup.set_default_text(*self.labeler.hyperparams)
+        self.popup.set_default_text(*self.labeler.params)
         self.popup.show()
         
     def update(self, ind):    
@@ -234,8 +234,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.model.add_to_phase_diagram(phase_names)
         #self.update(self.ind)
 
-    def update_labeler_hyperparams(self, std_noise, mean, std):
-        self.labeler.set_hyperparams(std_noise, mean, std) 
+    def update_labeler_hyperparams(self, std_noise, mean, std, max_phase, expand_degree,
+                                   background_length, max_iter):
+        self.labeler.set_hyperparams(std_noise, mean, std, max_phase, expand_degree,
+                                    background_length, max_iter) 
 
     @property
     def ind(self):
