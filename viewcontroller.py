@@ -245,9 +245,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def save_button_clicked(self):
         filename = self.model.current_filename
-        d = np.vstack((self.stripeview.q, self.stripeview.avg_pattern))
+        d = np.vstack((self.stripeview.avg_q, self.stripeview.avg_pattern))
         fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
-        np.save(fn, d)
+        if fn.endswith('xy'):
+            np.savetxt(fn, d)
+        else:
+            np.save(fn, d)
 
     def change_ind(self, change):
         self.ind += change
