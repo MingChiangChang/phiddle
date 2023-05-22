@@ -53,6 +53,14 @@ class CIFView(QWidget):
             else:
                 checkbox = self.widget_ls[idx]
                 checkbox.setText(cif)
+        for idx, widget in enumerate(self.widget_ls):
+            if idx >= len(cif_list):
+                self.layout.removeWidget(self.widget_ls[idx])
+        diff = len(self.widget_ls) - len(cif_list)
+        for idx in range(diff):
+            del self.widget_ls[-1] # always remove the last one
+
+
         self.widget_ls.append(self.amorphous_checkbox)
         self.layout.addWidget(self.amorphous_checkbox)
         self.layout.addWidget(self.button) 

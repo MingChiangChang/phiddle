@@ -73,6 +73,7 @@ class labeler():
         t[t==-1] = m*np.random.rand(np.sum(t==-1))
         ind = np.argmax(t)
         self.t, self.results = zip(*sorted(zip(t, results), reverse=True))
+        print("Labeling result:")
         print(results[0].phase_model.CPs)
 
         if self.background_option in ["None", "Default"]:
@@ -104,6 +105,8 @@ class labeler():
                                 self.std_noise, self.mean_θ, self.std_θ, 
                                 optimize_mode=self.optimize_mode, 
                                 maxiter=self.max_iter)
+        print("Refinement result:")
+        print(result)
         self.results = [result]
         self.has_labeled = True
         self.label_ind = 0
