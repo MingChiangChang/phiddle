@@ -6,6 +6,8 @@
 - [x] Saving json 
 - [x] Add save phase diagram button
 - [ ] Allow 3d phase diagram
+- [x] Allow reading csv and cif
+- [x] Allow pip installation
 - [x] Add amorphous option
 - [ ] Find out why labeling is so slow
 - [x] Allow more parameter settings

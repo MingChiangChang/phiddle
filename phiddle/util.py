@@ -23,6 +23,9 @@ def collect_data_and_q(h5, conds):
         cond_dict['cond'] = cond
         cond_dict['x'] = h5[cond].attrs['x_center']
         cond_dict['y'] = h5[cond].attrs['y_center']
+        if 'fracs' in list(h5[cond].attrs):
+            cond_dict['fracs'] = h5[cond].attrs['fracs']
+            cond_dict['cations'] = h5[cond].attrs['cations']
         data_dict[cond] = cond_dict 
 
     return data_dict 
@@ -71,3 +74,4 @@ def find_first_smaller(arr, value):
     for idx, val in enumerate(arr[::-1]):
         if val < value:
             return arr.shape[0]-idx
+

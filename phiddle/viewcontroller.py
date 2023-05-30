@@ -2,6 +2,7 @@ import os
 import sys
 import glob
 import json
+import logging
 
 import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
@@ -24,21 +25,26 @@ from labeling_engine import labeler
 from cif_view import CIFView
 from phase_diagram import PhaseDiagramView, PhaseDiagramList
 from popup import Popup
+from cif_to_input_file import cif_to_input
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
+
     def __init__(self,
                  h5_path = "data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
-                 cif_path = "/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv" ):
+                 csv_path = "/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv" ):
         super().__init__()
         # Temperature fixed
+        #menubar = self.menuBar()
+        #fileMenu = menubar.addMenu("&File")
+        self.logger = logging.getLogger(__name__)
         self.stripeview = stripeview()
         self.globalview = globalview()
         #self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
         #if self.h5_path.endswith("h5"):
         #    self.model = datamodel(self.h5_path)
         self.h5_path = h5_path
-        self.cif_path = cif_path
+        self.csv_path = csv_path
         #self.cif_path, _ = QFileDialog.getOpenFileName(None, "Open cif", "", "")
         #if self.cif_path.endswith("csv"):
         #    self.labeler = labeler(self.cif_path)
@@ -51,11 +57,11 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.popup = Popup() 
 
         # For testing
-        if h5_path is not None and cif_path is not None:
+        if h5_path is not None and csv_path is not None:
             self.model.read_h5(h5_path)
             self.ind = 0
             self.update(self.ind)
-            self.labeler.read_cifs(cif_path)
+            self.labeler.read_csv(csv_path)
             self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
 
 
@@ -100,10 +106,14 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         browse_button.setText("Browse data file")
         browse_button.clicked.connect(self.browse_button_clicked)
 
-        browse_cif_button = QPushButton()
-        browse_cif_button.setText("Browse CIF directory")
-        browse_cif_button.clicked.connect(self.browse_cif_button_clicked)
+        browse_csv_button = QPushButton()
+        browse_csv_button.setText("Browse CSV input files")
+        browse_csv_button.clicked.connect(self.browse_csv_button_clicked)
  
+        browse_cif_button = QPushButton()
+        browse_cif_button.setText("Browse CIF files")
+        browse_cif_button.clicked.connect(self.browse_cif_button_clicked)
+
         save_progress_button = QPushButton()
         save_progress_button.setText("Save Progress")
         save_progress_button.clicked.connect(self.save_progress_clicked)
@@ -127,6 +137,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         top_button_layout = QHBoxLayout()
         top_button_layout.addWidget(browse_button)
+        top_button_layout.addWidget(browse_csv_button)
         top_button_layout.addWidget(browse_cif_button)
         top_button_layout.addWidget(save_progress_button)
         top_button_layout.addWidget(load_progress_button)
@@ -172,11 +183,23 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.ind = 0
             self.update(self.ind)
 
-    def browse_cif_button_clicked(self):
-        self.cif_path, _ = QFileDialog.getOpenFileName(None, "Open cif", "", "")
-        if self.cif_path.endswith("csv"):
-            self.labeler.read_cifs(self.cif_path)
+    def browse_csv_button_clicked(self):
+        self.csv_path, _ = QFileDialog.getOpenFileName(None, "Open csv", "", "CSV Files (*.csv)")
+        if self.csv_path.endswith("csv"):
+            self.labeler.read_csv(self.csv_path)
             self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
+
+    def browse_cif_button_clicked(self):
+        self.cif_paths, _ = QFileDialog.getOpenFileNames(None, "Open cifs", "", "")
+        if np.all([path.endswith("cif") for path in self.cif_paths]):
+            self.csv_path, _ = QFileDialog.getSaveFileName(None, "Store csv", "", "CSV Files (*.csv)")
+            cif_to_input(self.cif_paths, self.csv_path, (10, 80))
+            self.labeler.read_csv(self.csv_path)
+            self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
+        else:
+            self.logger.error("Error: Non cif files were included.")
+
+
 
     def save_progress_clicked(self):
         self.save_fn, _ = QFileDialog.getSaveFileName(self, 'Save File', "", "JSON Files (*.json)")
@@ -184,21 +207,28 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             storing_ds = {}
             storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
             storing_ds["phases"] = self.model.phases
-            storing_ds["cif_path"] = self.cif_path
-            storing_ds["h5_path"] = self.h5_path
+            storing_ds["csv_path"] = os.path.abspath(self.csv_path)
+            storing_ds["h5_path"] = os.path.abspath(self.h5_path)
             with open(self.save_fn, 'w') as f:
                 json.dump(storing_ds, f)
 
     def load_progress_clicked(self):
         self.load_fn, _ = QFileDialog.getOpenFileName(None, "Open", "", "JSON Files (*.json)")
-        if self.load_fn.endswith(".json"):
-            with open(self.load_fn, 'r') as f:
-                load_meta_data = json.load(f)
+        with open(self.load_fn, 'r') as f:
+            load_meta_data = json.load(f)
+
+        if (os.path.isfile(load_meta_data["h5_path"])
+              and os.path.isfile(load_meta_data["csv_path"])):
 
             self.model.read_h5(load_meta_data["h5_path"])
-            self.labeler.read_cifs(load_meta_data["cif_path"])
+            self.h5_path = load_meta_data["h5_path"]
+            self.labeler.read_csv(load_meta_data["csv_path"])
+            self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
             self.model.phases = load_meta_data["phases"]
             self.ind = 0
+        else:
+            self.logger.error(f'ERROR: File in .json not found! Check if you have moved you file around')
+
 
     def labeler_setting_clicked(self):
         self.popup.set_default_text(*self.labeler.params)

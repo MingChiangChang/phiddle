@@ -35,8 +35,8 @@ class labeler():
         self.has_labeled = False
         #self.phase_names = [phase.name for phase in self.phases]
 
-    def read_cifs(self, cifs):
-        with open(cifs, 'r') as f:
+    def read_csv(self, csv):
+        with open(csv, 'r') as f:
             t = f.read()
         self.phases = create_phases(t, .2, FixedPseudoVoigt(0.1))
 
@@ -128,7 +128,7 @@ class labeler():
 
 
     def get_phase_names(self, isChecked_ls):
-        phase_names = [self.phases[idx].name for idx, check in enumerate(isChecked_ls[:-2])
+        phase_names = [self.phases[idx].name for idx, check in enumerate(isChecked_ls[:-1])
                                         if check]
         if isChecked_ls[-1]:
             phase_names.append("Amorphous")

@@ -31,7 +31,11 @@ class datamodel():
     def read_h5(self, file_path, q_path=None):
         if file_path.endswith("h5"):
             self.h5_path = file_path # keep for now, may be redundent
-            self.h5 = h5py.File(file_path, 'r')['exp']
+            try:
+                self.h5 = h5py.File(file_path, 'r')['exp']
+            except FileNotFoundError:
+                print("h5 path not found")
+                return
 
             self._ind = 0
             self.conds = sorted(list(self.h5))
@@ -42,6 +46,12 @@ class datamodel():
             self.current_dwell, self.current_tpeak = get_condition(self.conds[self._ind])
 
             self.x, self.y = collect_positions(self.h5, self.conds)
+            self.cations = self.h5[self.conds[0]].attrs['cations']
+
+            self.fractions = np.zeros((len(self.conds), len(self.cations)))
+            for i, _ in enumerate(self.cations):
+                for j, _ in enumerate(self.conds):
+                    self.fractions[j, i] = self.h5[self.conds[j]].attrs['fracs'][i][0]
 
         if file_path.endswith("npy"):
             self.data = np.load(file_path)

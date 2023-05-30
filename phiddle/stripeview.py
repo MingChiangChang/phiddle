@@ -169,6 +169,12 @@ class stripeview(FigureCanvasQTAgg):
         self.q = data['q']
         self.data = data['data']
         self.cond = data['cond']
+        self.title = self.cond
+        if 'fracs' in data:
+            self.fracs = data['fracs']
+            self.cations = data['cations']
+            for cation, frac in zip(self.cations, self.fracs):
+                self.title += f" {cation}:{frac[0]:.3f}"
         self.LeftX = round(self.data.shape[1]/2) 
         self.RightX = round(self.data.shape[1]/2) 
         self.avg_q = deepcopy(self.q)
@@ -182,7 +188,7 @@ class stripeview(FigureCanvasQTAgg):
         self.heatmap.imshow(self.data,
                        extent=(0, self.data.shape[1], self.q[-1], self.q[0]),
                        aspect=self.data.shape[1]/(self.q[-1]-self.q[0]))
-        self.heatmap.set_title(self.cond)
+        self.heatmap.set_title(self.title)
         self.heatmap.set_xlabel("index")
         self.heatmap.set_ylabel("q ($nm^{-1}$)")       
 
