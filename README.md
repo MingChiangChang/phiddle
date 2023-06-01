@@ -1,3 +1,10 @@
+# Installation
+```console
+git clone git@github.com:MingChiangChang/phiddle.git
+cd phiddle
+pip install .
+```
+
 # TODOs
 - [x] Phase diagram 
 - [x] Phase diagram data structure
