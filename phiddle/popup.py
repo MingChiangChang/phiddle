@@ -14,6 +14,8 @@ class Popup(QWidget):
     def __init__(self, parent=None):
 
         super(Popup, self).__init__(parent)
+        # Make popup window always stay on top
+        self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, True)
 
         self.std_noise_edit = QLineEdit()
         self.std_noise_prompt = QLabel()

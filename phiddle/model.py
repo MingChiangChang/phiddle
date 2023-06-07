@@ -46,12 +46,13 @@ class datamodel():
             self.current_dwell, self.current_tpeak = get_condition(self.conds[self._ind])
 
             self.x, self.y = collect_positions(self.h5, self.conds)
-            self.cations = self.h5[self.conds[0]].attrs['cations']
+            if 'cations' in list(self.h5[self.conds[0]].attrs):
+                self.cations = self.h5[self.conds[0]].attrs['cations']
 
-            self.fractions = np.zeros((len(self.conds), len(self.cations)))
-            for i, _ in enumerate(self.cations):
-                for j, _ in enumerate(self.conds):
-                    self.fractions[j, i] = self.h5[self.conds[j]].attrs['fracs'][i][0]
+                self.fractions = np.zeros((len(self.conds), len(self.cations)))
+                for i, _ in enumerate(self.cations):
+                    for j, _ in enumerate(self.conds):
+                        self.fractions[j, i] = self.h5[self.conds[j]].attrs['fracs'][i][0]
 
         if file_path.endswith("npy"):
             self.data = np.load(file_path)

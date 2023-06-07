@@ -31,8 +31,8 @@ from cif_to_input_file import cif_to_input
 class TopLevelWindow(QtWidgets.QMainWindow):
 
     def __init__(self,
-                 h5_path = "data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
-                 csv_path = "/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv" ):
+                 h5_path = None, #"data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
+                 csv_path = None): #"/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv" ):
         super().__init__()
         # Temperature fixed
         #menubar = self.menuBar()
