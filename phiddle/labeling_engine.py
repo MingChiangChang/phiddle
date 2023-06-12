@@ -93,7 +93,7 @@ class labeler():
             data[data<0] = 1E-5
             bg = None
         elif self.background_option == "Default":
-            bg = BackgroundModel(x, EQ(), 8., 10.)
+            bg = BackgroundModel(q, EQ(), 8., 10.)
         else:
             bg = None
         #data -= np.min(data)
