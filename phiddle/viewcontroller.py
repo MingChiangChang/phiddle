@@ -191,13 +191,17 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def browse_cif_button_clicked(self):
         self.cif_paths, _ = QFileDialog.getOpenFileNames(None, "Open cifs", "", "")
-        if np.all([path.endswith("cif") for path in self.cif_paths]):
+        if not self.cif_paths:
+            self.logger.error("Error: No file are chosen")
+        elif not np.all([path.endswith("cif") for path in self.cif_paths]):
+            self.logger.error("Error: Non cif files were included.")
+        else:
             self.csv_path, _ = QFileDialog.getSaveFileName(None, "Store csv", "", "CSV Files (*.csv)")
             cif_to_input(self.cif_paths, self.csv_path, (10, 80))
             self.labeler.read_csv(self.csv_path)
             self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
-        else:
-            self.logger.error("Error: Non cif files were included.")
+
+            
 
 
 
