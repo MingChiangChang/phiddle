@@ -106,7 +106,7 @@ class labeler():
                                 optimize_mode=self.optimize_mode, 
                                 maxiter=self.max_iter)
         print("Refinement result:")
-        print(result)
+        print(result.CPs)
         self.results = [result]
         self.has_labeled = True
         self.label_ind = 0

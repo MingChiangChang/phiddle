@@ -115,10 +115,12 @@ class stripeview(FigureCanvasQTAgg):
             # Let this be here for now
             q_min_ind = find_first_larger(self.q, self.bottomY) 
             q_max_ind = find_first_smaller(self.q, self.topY)
+            x_min_ind = find_first_larger(self.xx, self.LeftX)
+            x_max_ind = find_first_larger(self.xx, self.RightX)
             if self.LeftX == self.RightX: 
-                self.avg_pattern = self.data[q_min_ind:q_max_ind, self.LeftX] 
+                self.avg_pattern = self.data[q_min_ind:q_max_ind, x_min_ind] 
             else:
-                self.avg_pattern = np.mean(self.data[q_min_ind:q_max_ind,self.LeftX:self.RightX], axis=1)
+                self.avg_pattern = np.mean(self.data[q_min_ind:q_max_ind, x_min_ind:x_max_ind], axis=1)
             self.avg_q = self.q[q_min_ind:q_max_ind]
             self.avg_pattern = minmax_norm(self.avg_pattern)
             self.spectra.clear()
@@ -163,20 +165,21 @@ class stripeview(FigureCanvasQTAgg):
         self.RightX = 0
         self.topY = 100
 
-    def plot_new_data(self, data, stick_patterns=None, fit_result=None):
+    def plot_new_data(self, data, xx=None, stick_patterns=None, fit_result=None):
         """ This will include initializing some attributes like self.q """
         self.clear_figures()
         self.q = data['q']
         self.data = data['data']
         self.cond = data['cond']
+        self.xx = xx
         self.title = self.cond
         if 'fracs' in data:
             self.fracs = data['fracs']
             self.cations = data['cations']
             for cation, frac in zip(self.cations, self.fracs):
                 self.title += f" {cation}:{frac[0]:.3f}"
-        self.LeftX = round(self.data.shape[1]/2) 
-        self.RightX = round(self.data.shape[1]/2) 
+        self.LeftX = 0#round(self.data.shape[1]/2) 
+        self.RightX = 0#round(self.data.shape[1]/2) 
         self.avg_q = deepcopy(self.q)
 
         self.spectra_left_x = np.min(self.q)
@@ -185,11 +188,19 @@ class stripeview(FigureCanvasQTAgg):
                                                         self.spectra_box_y, color='r')
 
         (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
+        if self.xx is not None:
+            xmin = self.xx[0] 
+            xmax = self.xx[-1]
+            xlabel = "Location (um)"
+        else:
+            xmin = 0
+            xmax = self.data.shape[1]
+            xlabel = "Index"
         self.heatmap.imshow(self.data,
-                       extent=(0, self.data.shape[1], self.q[-1], self.q[0]),
-                       aspect=self.data.shape[1]/(self.q[-1]-self.q[0]))
+                       extent=(xmin, xmax, self.q[-1], self.q[0]),
+                       aspect=(xmax-xmin)/(self.q[-1]-self.q[0]))
         self.heatmap.set_title(self.title)
-        self.heatmap.set_xlabel("index")
+        self.heatmap.set_xlabel(xlabel)
         self.heatmap.set_ylabel("q ($nm^{-1}$)")       
 
 

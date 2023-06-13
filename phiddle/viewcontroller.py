@@ -328,7 +328,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.stripeview.avg_pattern = None # Not good
         self.stripeview.clear_figures()
-        self.stripeview.plot_new_data(self.model.current_data)
+        self.stripeview.plot_new_data(self.model.current_data, self.model.current_xx)
         self.globalview.clear_figures()
         self.globalview.plot(self.model.dwells, self.model.tpeaks,
                              self.model.labeled_dwells, self.model.labeled_tpeaks,

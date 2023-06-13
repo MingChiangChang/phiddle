@@ -51,8 +51,13 @@ class datamodel():
 
                 self.fractions = np.zeros((len(self.conds), len(self.cations)))
                 for i, _ in enumerate(self.cations):
-                    for j, _ in enumerate(self.conds):
-                        self.fractions[j, i] = self.h5[self.conds[j]].attrs['fracs'][i][0]
+                    for j, cond in enumerate(self.conds):
+                        self.fractions[j, i] = self.h5[cond].attrs['fracs'][i][0]
+            
+            if 'xx' in list(self.h5[self.conds[0]].attrs):
+                self.xx = [] 
+                for idx, cond in enumerate(self.conds):
+                    self.xx.append(self.h5[cond].attrs['xx'])
 
         if file_path.endswith("npy"):
             self.data = np.load(file_path)
@@ -110,6 +115,12 @@ class datamodel():
     @property
     def current_data(self):
         return self.__getitem__(self.ind)
+
+    @property
+    def current_xx(self):
+        if hasattr(self, 'xx'):
+            return self.xx[self.ind]
+        return None
 
     @property
     def ind(self):
