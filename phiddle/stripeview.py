@@ -115,8 +115,12 @@ class stripeview(FigureCanvasQTAgg):
             # Let this be here for now
             q_min_ind = find_first_larger(self.q, self.bottomY) 
             q_max_ind = find_first_smaller(self.q, self.topY)
-            x_min_ind = find_first_larger(self.xx, self.LeftX)
-            x_max_ind = find_first_larger(self.xx, self.RightX)
+            if hasattr(self, xx):
+                x_min_ind = find_first_larger(self.xx, self.LeftX)
+                x_max_ind = find_first_larger(self.xx, self.RightX)
+            else:
+                x_min_ind = self.LeftX
+                x_max_ind = self.RightX
             if self.LeftX == self.RightX: 
                 self.avg_pattern = self.data[q_min_ind:q_max_ind, x_min_ind] 
             else:
