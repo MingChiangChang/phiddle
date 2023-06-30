@@ -3,7 +3,7 @@ import numpy as np
 
 from pyPhaseLabel import PhaseModel, CrystalPhase, EQ, BackgroundModel, FixedPseudoVoigt
 from pyPhaseLabel import create_phases, evaluate_obj, optimize_phase, Lorentz, PseudoVoigt
-from julia.Main import Wildcard, Lazytree, search, get_probabilities, get_fraction 
+from julia.Main import Wildcard, Lazytree, search, get_probabilities, get_fraction
 from julia.BackgroundSubtraction import mcbl
 
 
@@ -78,7 +78,7 @@ class labeler():
         self.t, self.results = zip(*sorted(zip(t, results), reverse=True))
         print("Labeling result:")
         print(results[0].phase_model.CPs)
-        results = [result.phase_model for result in  results]
+        self.results = [result.phase_model for result in self.results]
 
         if self.background_option in ["None", "Default"]:
             self.bg = np.zeros(q.shape)

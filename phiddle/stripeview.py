@@ -115,7 +115,7 @@ class stripeview(FigureCanvasQTAgg):
             # Let this be here for now
             q_min_ind = find_first_larger(self.q, self.bottomY) 
             q_max_ind = find_first_smaller(self.q, self.topY)
-            if hasattr(self, xx):
+            if hasattr(self, 'xx'):
                 x_min_ind = find_first_larger(self.xx, self.LeftX)
                 x_max_ind = find_first_larger(self.xx, self.RightX)
             else:
@@ -177,11 +177,13 @@ class stripeview(FigureCanvasQTAgg):
         self.cond = data['cond']
         self.xx = xx
         self.title = self.cond
+
         if 'fracs' in data:
             self.fracs = data['fracs']
             self.cations = data['cations']
             for cation, frac in zip(self.cations, self.fracs):
                 self.title += f" {cation}:{frac[0]:.3f}"
+
         self.LeftX = 0#round(self.data.shape[1]/2) 
         self.RightX = 0#round(self.data.shape[1]/2) 
         self.avg_q = deepcopy(self.q)
@@ -207,7 +209,6 @@ class stripeview(FigureCanvasQTAgg):
         self.heatmap.set_xlabel(xlabel)
         self.heatmap.set_ylabel("q ($nm^{-1}$)")       
 
-
         self.aspan = self.heatmap.axvspan(self.LeftX, self.RightX, color='k', alpha=0)
 
         if self.avg_pattern is None:
@@ -229,23 +230,23 @@ class stripeview(FigureCanvasQTAgg):
         self.draw()
 
     def plot_fit_result(self, ind, fit_result, bg=None):
-        try:
-            fit_phase_model = fit_result.phase_model 
-        except AttributeError:
-            fit_phase_model = fit_result
+        #try:
+        #    fit_phase_model = fit_result.phase_model 
+        #except AttributeError:
+        #    fit_phase_model = fit_result
             
-        fit = evaluate_obj(fit_phase_model, self.avg_q)
+        fit = evaluate_obj(fit_result, self.avg_q)
 
         phase_name = []
         if np.sum(bg) != 0.:
             fit += bg
         else:
-            bg = evaluate_obj(fit_phase_model.background, self.avg_q)
+            bg = evaluate_obj(fit_result.background, self.avg_q)
 
         self.spectra.plot(self.avg_q, fit, label="Fitted")
         self.spectra.plot(self.avg_q, bg, label="background")
 
-        for cp in fit_phase_model.CPs:
+        for cp in fit_result.CPs:
             self.spectra.plot(self.avg_q, evaluate_obj(cp, self.avg_q), label=cp.name)
             phase_name.append(cp.name)
 
