@@ -89,6 +89,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         label_w_phase_button.setText("Fit With Phase")
         label_w_phase_button.clicked.connect(self.label_w_phase_button_clicked)
 
+        save_residual_button = QPushButton()
+        save_residual_button.setText("Save Residual")
+        save_residual_button.clicked.connect(self.save_residual)
+
         save_button = QPushButton()
         save_button.setText("Save")
         save_button.clicked.connect(self.save_button_clicked)
@@ -149,6 +153,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         bottom_button_layout = QHBoxLayout()
         bottom_button_layout.addWidget(label_button)
         bottom_button_layout.addWidget(label_w_phase_button)
+        bottom_button_layout.addWidget(save_residual_button)
         bottom_button_layout.addWidget(save_button)
         bottom_button_layout.addWidget(back_button)
         bottom_button_layout.addWidget(next_button)
@@ -277,14 +282,33 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                     selected_phase_names)
             self.stripeview.plot_label_result_w_spectra(1, self.labeler.results[0], self.labeler.bg)
 
-    def save_button_clicked(self):
+    def save_residual(self):
+        if not self.labeler.has_labeled:
+            self.save_button_clicked()
+            return
         filename = self.model.current_filename
-        d = np.vstack((self.stripeview.avg_q, self.stripeview.avg_pattern))
-        fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
+        d = np.vstack((self.stripeview.avg_q, self.labeler.residual))
+        fn, _ = QFileDialog.getSaveFileName(self, 'Save Residual File', filename, "")
         if fn.endswith('xy'):
             np.savetxt(fn, d)
         else:
             np.save(fn, d)
+
+
+    def save_button_clicked(self):
+        filename = self.model.current_filename
+        d = np.vstack((self.stripeview.avg_q, self.stripeview.avg_pattern))
+        fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
+
+        if self.labeler.has_labeled:
+            datadict = self.labeler.get_dict_for_storing()            
+            with open(fn+'.json', 'w') as f:
+                json.dump(datadict, f)
+        else:
+            if fn.endswith('xy'):
+                np.savetxt(fn, d)
+            else:
+                np.save(fn, d)
 
     def change_ind(self, change):
         self.ind += change

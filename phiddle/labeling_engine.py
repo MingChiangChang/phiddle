@@ -43,10 +43,13 @@ class labeler():
         self.phase_names = [phase.name for phase in self.phases]
 
     def fit(self, q, d):
+        self.q = q
+        self.data = deepcopy(d)
         data = deepcopy(d)
         tree = Lazytree(self.phases, q)
 
         if self.background_option == "MCBL":
+            self.use_background = False
             self.bg = mcbl(data, q, self.background_length)
             data -= self.bg 
             data[data<0] = 1E-5
@@ -75,6 +78,7 @@ class labeler():
         self.t, self.results = zip(*sorted(zip(t, results), reverse=True))
         print("Labeling result:")
         print(results[0].phase_model.CPs)
+        results = [result.phase_model for result in  results]
 
         if self.background_option in ["None", "Default"]:
             self.bg = np.zeros(q.shape)
@@ -84,6 +88,8 @@ class labeler():
         #return results[:5], bg # bg is only nonzero when constant background is used (MCBL0
 
     def fit_phases(self, q, d, phase_names):
+        self.q = q
+        self.data = deepcopy(d)
         data = deepcopy(d)
         phases = self.get_phase_w_phase_names(phase_names)
 
@@ -112,6 +118,13 @@ class labeler():
         self.label_ind = 0
         if self.background_option in ["None", "Default"]:
             self.bg = np.zeros(q.shape)
+
+    @property
+    def residual(self):
+        spectrum = evaluate_obj(self.results[self.label_ind], self.q) 
+        d = self.data - spectrum
+        d -= self.bg
+        return d
 
     def next_label_result(self):
         self.label_ind += 1
@@ -156,3 +169,47 @@ class labeler():
 
     def get_phase_w_phase_names(self, phase_names):
         return [self.phases[self.phase_names.index(phase_name)] for phase_name in phase_names] 
+
+    def get_dict_for_storing(self):
+        datadict = {} 
+        datadict['q'] = self.q.tolist()
+        datadict['XRD'] = self.data.tolist()
+
+        res = self.results[self.label_ind]
+        if res.background is not None:
+            datadict['background'] = (evaluate_obj(res.background, self.q) + self.bg).tolist()
+        else:
+            datadict['background'] = self.bg.tolist() 
+
+        fractions = get_fraction(res.CPs)        
+        phase_dict = {}
+        for idx, phase in enumerate(res.CPs):
+            phase_dict[phase.name] = {}
+            phase_dict[phase.name]["lattice"] = self.get_dict_from_cl(phase.cl)
+            phase_dict[phase.name]["ref_lattice"] = self.get_dict_from_cl(phase.origin_cl)
+            phase_dict[phase.name]["pattern"] = evaluate_obj(phase, self.q).tolist()
+            phase_dict[phase.name]["fraction"] = fractions[idx]
+            phase_dict[phase.name]["act"] = phase.act
+            phase_dict[phase.name]["width"] = phase.σ
+        datadict['phase'] = phase_dict
+        return datadict
+
+
+    def get_dict_from_cl(self, cl):
+         c_dict = {} 
+         c_dict["a"] = cl.a
+         c_dict["b"] = cl.a
+         c_dict["c"] = cl.a
+         c_dict["α"] = cl.α*180/np.pi
+         c_dict["β"] = cl.β*180/np.pi
+         c_dict["γ"] = cl.γ*180/np.pi
+         return c_dict
+
+
+
+
+
+
+
+
+
