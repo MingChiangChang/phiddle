@@ -1,9 +1,9 @@
 import numpy as np
 
 
-
-COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
+COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
           '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
 
 def collect_data_and_q(h5, conds):
 
@@ -17,7 +17,7 @@ def collect_data_and_q(h5, conds):
 
         arr = np.zeros((dim1, dim2))
         for i in range(dim2):
-            arr[:,i] = h5[cond][str(i)]['integrated_1d'][1]
+            arr[:, i] = h5[cond][str(i)]['integrated_1d'][1]
         cond_dict['q'] = q
         cond_dict['data'] = arr
         cond_dict['cond'] = cond
@@ -26,9 +26,10 @@ def collect_data_and_q(h5, conds):
         if 'fracs' in list(h5[cond].attrs):
             cond_dict['fracs'] = h5[cond].attrs['fracs']
             cond_dict['cations'] = h5[cond].attrs['cations']
-        data_dict[cond] = cond_dict 
+        data_dict[cond] = cond_dict
 
-    return data_dict 
+    return data_dict
+
 
 def collect_conditions(conds):
 
@@ -40,11 +41,13 @@ def collect_conditions(conds):
 
     return tau_arr, tpeak_arr
 
+
 def get_condition(condition_str):
     _, tau, _, tpeak = condition_str.split('_')
     return float(tau), float(tpeak)
 
-def collect_positions(h5, conds): # pass conds to make sure the order is correct
+
+def collect_positions(h5, conds):  # pass conds to make sure the order is correct
 
     x_arr = np.zeros(len(conds))
     y_arr = np.zeros(len(conds))
@@ -54,14 +57,16 @@ def collect_positions(h5, conds): # pass conds to make sure the order is correct
 
     return x_arr, y_arr
 
+
 def minmax_norm(data):
     _data = data - np.min(data)
     _data /= np.max(_data)
     return _data
 
+
 def index_phase(phase_names, phase_ls):
     return [idx for idx, name in enumerate(phase_ls)
-                 if name in phase_names]
+            if name in phase_names]
 
 
 def find_first_larger(arr, value):
@@ -73,5 +78,4 @@ def find_first_larger(arr, value):
 def find_first_smaller(arr, value):
     for idx, val in enumerate(arr[::-1]):
         if val < value:
-            return arr.shape[0]-idx
-
+            return arr.shape[0] - idx

@@ -5,13 +5,14 @@ import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QPushButton
 from matplotlib.backends.backend_qtagg import (
-        FigureCanvasQTAgg,
-        NavigationToolbar2QT as NavigationToolbar,
+    FigureCanvasQTAgg,
+    NavigationToolbar2QT as NavigationToolbar,
 )
 from matplotlib.figure import Figure
 import h5py
 
 f = h5py.File("data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5")
+
 
 class MplWidget(FigureCanvasQTAgg):
     def __init__(self, parent=None):
@@ -19,10 +20,13 @@ class MplWidget(FigureCanvasQTAgg):
         super(MplWidget, self).__init__(fig)
         self.setParent(parent)
 
-        self.h5 = h5py.File("data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5", 'r')['exp']
-        self.conds= list(self.h5)
+        self.h5 = h5py.File(
+            "data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
+            'r')['exp']
+        self.conds = list(self.h5)
         self.ind = 0
-        self.q, self.data = self.collect_data_and_q(self.h5, self.conds[self.ind])
+        self.q, self.data = self.collect_data_and_q(
+            self.h5, self.conds[self.ind])
 
         gs = fig.add_gridspec(1, 2)
         self.ax1 = fig.add_subplot(gs[0, 0])
@@ -31,62 +35,65 @@ class MplWidget(FigureCanvasQTAgg):
         self.bottomLeftX = 0
         self.bottomLeftY = -100
         self.topRightX = 0
-        self.topRightY = 100 
+        self.topRightY = 100
 
-        self.x = np.array([self.bottomLeftX, self.bottomLeftX, self.topRightX, self.topRightX, self.bottomLeftX])
-        self.y = np.array([self.bottomLeftY, self.topRightY, self.topRightY, self.bottomLeftY, self.bottomLeftY])
+        self.x = np.array([self.bottomLeftX, self.bottomLeftX,
+                          self.topRightX, self.topRightX, self.bottomLeftX])
+        self.y = np.array([self.bottomLeftY, self.topRightY,
+                          self.topRightY, self.bottomLeftY, self.bottomLeftY])
 
         (self.heatmap, ) = self.ax1.plot(self.x, self.y, color='r')
         self.ax1.imshow(self.data,
-                       extent=(0, self.data.shape[1], self.q[0], self.q[-1]),
-                       aspect=self.data.shape[1]/(self.q[-1]-self.q[0]))
+                        extent=(0, self.data.shape[1], self.q[0], self.q[-1]),
+                        aspect=self.data.shape[1] / (self.q[-1] - self.q[0]))
         self.ax1.set_title(self.conds[0])
-        self.aspan = self.ax1.axvspan(self.bottomLeftX, self.topRightX, color='k', alpha=0)
-        
-        self.avg_pattern = self.data[:,round(self.data.shape[1]/2)]
+        self.aspan = self.ax1.axvspan(
+            self.bottomLeftX, self.topRightX, color='k', alpha=0)
+
+        self.avg_pattern = self.data[:, round(self.data.shape[1] / 2)]
         (self.avgplot, ) = self.ax2.plot(self.q, self.avg_pattern, color='r')
 
         self.moving = False
         self.plotSnap = 1
 
-
         self.cid1 = self.mpl_connect("button_press_event", self.onclick)
         self.cid2 = self.mpl_connect("button_release_event", self.onrelease)
         self.cid3 = self.mpl_connect("motion_notify_event", self.onmotion)
-
 
     @property
     def current_cond(self):
         return self.conds[self.ind]
 
-
     @property
     def filename(self):
         cond = self.current_cond
         ion = self.h5[cond].attrs['cations'][0]
-        frac = self.h5[self.current_cond].attrs['fracs'][0][0] 
+        frac = self.h5[self.current_cond].attrs['fracs'][0][0]
         return f"{cond}_{ion}_{frac:.3f}"
-
 
     def next(self):
         self.ind += 1
-        self.q, self.data = self.collect_data_and_q(self.h5, self.conds[self.ind])
+        self.q, self.data = self.collect_data_and_q(
+            self.h5, self.conds[self.ind])
         self.ax1.clear()
         self.ax2.clear()
         self.bottomLeftX = 0
         self.bottomLeftY = -100
         self.topRightX = 0
         self.topRightY = 100
-        self.x = np.array([self.bottomLeftX, self.bottomLeftX, self.topRightX, self.topRightX, self.bottomLeftX])
-        self.y = np.array([self.bottomLeftY, self.topRightY, self.topRightY, self.bottomLeftY, self.bottomLeftY])
+        self.x = np.array([self.bottomLeftX, self.bottomLeftX,
+                          self.topRightX, self.topRightX, self.bottomLeftX])
+        self.y = np.array([self.bottomLeftY, self.topRightY,
+                          self.topRightY, self.bottomLeftY, self.bottomLeftY])
         (self.heatmap, ) = self.ax1.plot(self.x, self.y, color='r')
         self.ax1.imshow(self.data,
-                       extent=(0, self.data.shape[1], self.q[0], self.q[-1]),
-                       aspect=self.data.shape[1]/(self.q[-1]-self.q[0]))
+                        extent=(0, self.data.shape[1], self.q[0], self.q[-1]),
+                        aspect=self.data.shape[1] / (self.q[-1] - self.q[0]))
         self.ax1.set_title(self.conds[self.ind])
-        self.aspan = self.ax1.axvspan(self.bottomLeftX, self.topRightX, color='k', alpha=0)
+        self.aspan = self.ax1.axvspan(
+            self.bottomLeftX, self.topRightX, color='k', alpha=0)
 
-        self.avg_pattern = self.data[:,round(self.data.shape[1]/2)]
+        self.avg_pattern = self.data[:, round(self.data.shape[1] / 2)]
         (self.avgplot, ) = self.ax2.plot(self.q, self.avg_pattern, color='r')
         self.draw()
 
@@ -98,24 +105,22 @@ class MplWidget(FigureCanvasQTAgg):
         q = h5[cond]['0']['integrated_1d'][0]
         arr = np.zeros((dim1, dim2))
         for i in range(dim2):
-            arr[:,i] = h5[cond][str(i)]['integrated_1d'][1]
+            arr[:, i] = h5[cond][str(i)]['integrated_1d'][1]
 
         return q, arr
-    
 
-    #def update(self):
+    # def update(self):
     #    self.q, self.data = self.collect_data_and_q(self.h5, self.conds[self.ind])
     #    self.ax1.imshow(self.data,
     #                   extent=(0, self.data.shape[1], self.q[0], self.q[-1]),
     #                   aspect=self.data.shape[1]/(self.q[-1]-self.q[0]))
     #    #self.draw()
 
-
     def setSnapBase(self, base):
         return lambda value: int(base * round(float(value) / base))
 
     def onclick(self, event):
-        if self.plotSnap <=0:
+        if self.plotSnap <= 0:
             self.bottomLeftX = event.xdata
             self.bottomLeftY = event.ydata
         else:
@@ -125,7 +130,7 @@ class MplWidget(FigureCanvasQTAgg):
 
         try:
             self.aspan.remove()
-        except:
+        except BaseException:
             pass
 
         self.moving = True
@@ -140,24 +145,26 @@ class MplWidget(FigureCanvasQTAgg):
                 calculateSnapCoordinates = self.setSnapBase(self.setSnapBase)
                 self.topRightX = calculateSnapCoordinates(event.xdata)
                 self.topRightY = calculateSnapCoordinates(event.ydata)
-            except:
+            except BaseException:
                 pass
 
-        self.x = np.array([self.bottomLeftX, self.bottomLeftX, self.topRightX, self.topRightX, self.bottomLeftX])    
-    
+        self.x = np.array([self.bottomLeftX, self.bottomLeftX,
+                          self.topRightX, self.topRightX, self.bottomLeftX])
+
         self.heatmap.set_xdata(self.x)
 
         self.aspan = self.ax1.axvspan(
-                self.bottomLeftX, self.topRightX,
-                0,1,
-                color = 'b',
-                alpha = 0.25,
+            self.bottomLeftX, self.topRightX,
+            0, 1,
+            color='b',
+            alpha=0.25,
         )
 
         self.moving = False
         if self.bottomLeftX > self.topRightX:
             self.bottomLeftX, self.topRightX = self.topRightX, self.bottomLeftX
-        self.avg_pattern = np.mean(self.data[:,self.bottomLeftX:self.topRightX], axis=1)
+        self.avg_pattern = np.mean(
+            self.data[:, self.bottomLeftX:self.topRightX], axis=1)
         self.avgplot.set_ydata(self.avg_pattern)
 
         self.draw()
@@ -178,11 +185,11 @@ class MplWidget(FigureCanvasQTAgg):
             self.topRightX = self.calculateSnapCoordinates(event.xdata)
             self.topRightY = self.calculateSnapCoordinates(event.ydata)
 
-        self.x = np.array([self.bottomLeftX, self.bottomLeftX, self.topRightX, self.topRightX, self.bottomLeftX])
+        self.x = np.array([self.bottomLeftX, self.bottomLeftX,
+                          self.topRightX, self.topRightX, self.bottomLeftX])
 
         self.heatmap.set_xdata(self.x)
         self.draw()
-
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
@@ -212,6 +219,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def button2_clicked(self):
         self.canvas.next()
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

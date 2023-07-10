@@ -2,12 +2,11 @@ import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-      QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
-      QCheckBox, QFileDialog
-      )
-from matplotlib.backends.backend_qtagg import (        FigureCanvasQTAgg,
-        NavigationToolbar2QT as NavigationToolbar,
+    QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
+    QCheckBox, QFileDialog
 )
+from matplotlib.backends.backend_qtagg import (
+    FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
 from matplotlib.figure import Figure
 
 from util import COLORS
@@ -48,7 +47,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
         self.phase_diagram.set_ylabel("Peak Temperature ($^oC$)")
 
         self.phase_diagram.legend()
-        self.draw()     
+        self.draw()
 
     def save_phase_diagram(self):
         fn, _ = QFileDialog.getSaveFileName(self, 'Save Phase Diagram', "", "")
@@ -84,15 +83,15 @@ class PhaseDiagramList(QWidget):
                 self.widget_ls.append(checkbox)
                 self.layout.addWidget(checkbox)
             else:
-                checkbox = self.widget_ls[idx] 
+                checkbox = self.widget_ls[idx]
                 checkbox.setText(phase)
             checkbox.setChecked(True)
 
         if len(phases) > len(self.widget_ls):
-            for i in range(len(phase),len(self.widget_ls)):
+            for i in range(len(phase), len(self.widget_ls)):
                 self.layout.removeWidget(self.widget_ls[i])
                 del self.widget_ls[i]
 
-
     def update_phase_diagram(self):
-        self.checked.emit([checkbox.isChecked() for checkbox in self.widget_ls])
+        self.checked.emit([checkbox.isChecked()
+                          for checkbox in self.widget_ls])

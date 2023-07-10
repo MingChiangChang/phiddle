@@ -19,8 +19,8 @@ class globalview(FigureCanvasQTAgg):
         self.setParent = parent
 
         gs = fig.add_gridspec(1, 2)
-        self.condition_map = fig.add_subplot(gs[0, 0])#, picker=1)
-        self.wafer_map = fig.add_subplot(gs[0, 1])#, picker=1)
+        self.condition_map = fig.add_subplot(gs[0, 0])  # , picker=1)
+        self.wafer_map = fig.add_subplot(gs[0, 1])  # , picker=1)
 
         self.cid1 = self.mpl_connect('pick_event', self.on_pick)
 
@@ -33,24 +33,30 @@ class globalview(FigureCanvasQTAgg):
         self.condition_map.clear()
         self.wafer_map.clear()
 
-
-    def plot(self, dwells, tpeaks, 
+    def plot(self, dwells, tpeaks,
              labeled_dwells, labeled_tpeaks,
              current_dwell, current_tpeak,
              x, y,
              labeled_x, labeled_y,
-             current_x, current_y): # This shows that this should be separated ..
+             current_x, current_y):  # This shows that this should be separated ..
         self.clear_figures()
 
-        self.condition_artist = self.condition_map.scatter(dwells, tpeaks, color='b', s=8, picker=True)
+        self.condition_artist = self.condition_map.scatter(
+            dwells, tpeaks, color='b', s=8, picker=True)
         self.condition_map.scatter(labeled_dwells, labeled_tpeaks, s=8,
                                    color='g', picker=0.),
-        self.condition_map.scatter(current_dwell, current_tpeak, s=8, color='r', picker=0.)
+        self.condition_map.scatter(
+            current_dwell,
+            current_tpeak,
+            s=8,
+            color='r',
+            picker=0.)
         self.condition_map.set_xscale("log")
         self.condition_map.set_xlabel("Dwell (us)")
         self.condition_map.set_ylabel("Peak temperature ($^oC$)")
 
-        self.location_artist = self.wafer_map.scatter(x, y, color='b', s=8, picker=True)
+        self.location_artist = self.wafer_map.scatter(
+            x, y, color='b', s=8, picker=True)
         self.wafer_map.scatter(labeled_x, labeled_y, s=8, color='g', picker=0.)
         self.wafer_map.scatter(current_x, current_y, s=8, color='r', picker=0.)
         self.wafer_map.set_xlabel("x (mm)")

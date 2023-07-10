@@ -15,5 +15,3 @@ for cond in tqdm(conds):
 
     filename = f"{cond}_{ion}_{frac:.3f}_q"
     np.save(filename, q)
-
-
