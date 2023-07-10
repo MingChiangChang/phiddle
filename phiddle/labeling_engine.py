@@ -77,7 +77,7 @@ class labeler():
         ind = np.argmax(t)
         self.t, self.results = zip(*sorted(zip(t, results), reverse=True))
         print("Labeling result:")
-        print(results[0].phase_model.CPs)
+        print(self.results[0].phase_model.CPs)
         self.results = [result.phase_model for result in self.results]
 
         if self.background_option in ["None", "Default"]:
