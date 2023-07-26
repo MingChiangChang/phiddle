@@ -183,6 +183,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.model.read_h5(self.h5_path)
             self.ind = 0
             self.update(self.ind)
+        elif self.h5_path.endswith("udi"):
+            self.model.read_udi(self.h5_path)
+            self.ind = 0
+            self.update(self.ind)
 
     def browse_csv_button_clicked(self):
         self.csv_path, _ = QFileDialog.getOpenFileName(
@@ -222,22 +226,23 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def load_progress_clicked(self):
         self.load_fn, _ = QFileDialog.getOpenFileName(
             None, "Open", "", "JSON Files (*.json)")
-        with open(self.load_fn, 'r') as f:
-            load_meta_data = json.load(f)
+        if self.load_fn:
+            with open(self.load_fn, 'r') as f:
+                load_meta_data = json.load(f)
 
-        if (os.path.isfile(load_meta_data["h5_path"])
-                and os.path.isfile(load_meta_data["csv_path"])):
+            if (os.path.isfile(load_meta_data["h5_path"])
+                    and os.path.isfile(load_meta_data["csv_path"])):
 
-            self.model.read_h5(load_meta_data["h5_path"])
-            self.h5_path = load_meta_data["h5_path"]
-            self.labeler.read_csv(load_meta_data["csv_path"])
-            self.cifview.update_cif_list(
-                [phase.name for phase in self.labeler.phases])
-            self.model.phases = load_meta_data["phases"]
-            self.ind = 0
-        else:
-            self.logger.error(
-                f'ERROR: File in .json not found! Check if you have moved you file around')
+                self.model.read_h5(load_meta_data["h5_path"])
+                self.h5_path = load_meta_data["h5_path"]
+                self.labeler.read_csv(load_meta_data["csv_path"])
+                self.cifview.update_cif_list(
+                    [phase.name for phase in self.labeler.phases])
+                self.model.phases = load_meta_data["phases"]
+                self.ind = 0
+            else:
+                self.logger.error(
+                    f'ERROR: File in .json not found! Check if you have moved you file around')
 
     def labeler_setting_clicked(self):
         self.popup.set_default_text(*self.labeler.params)

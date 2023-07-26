@@ -118,7 +118,7 @@ class stripeview(FigureCanvasQTAgg):
             # Let this be here for now
             q_min_ind = find_first_larger(self.q, self.bottomY)
             q_max_ind = find_first_smaller(self.q, self.topY)
-            if hasattr(self, 'xx'):
+            if self.xx is not None:
                 x_min_ind = find_first_larger(self.xx, self.LeftX)
                 x_max_ind = find_first_larger(self.xx, self.RightX)
             else:

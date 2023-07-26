@@ -1,5 +1,6 @@
 from copy import deepcopy
 import numpy as np
+from scipy.interpolate import CubicSpline
 
 from pyPhaseLabel import PhaseModel, CrystalPhase, EQ, BackgroundModel, FixedPseudoVoigt
 from pyPhaseLabel import create_phases, evaluate_obj, optimize_phase, Lorentz, PseudoVoigt
@@ -43,8 +44,13 @@ class labeler():
     def fit(self, q, d):
         self.q = q
         self.data = deepcopy(d)
-        data = deepcopy(d)
-        tree = Lazytree(self.phases, q)
+        if len(self.data) > 2048:
+            cs = CubicSpline(self.q, self.data)
+            q = np.linspace(q[0], q[-1], 2048)
+            data = cs(q)
+
+        data = self.data #deepcopy(d)
+        tree = Lazytree(self.phases, self.q)
 
         if self.background_option == "MCBL":
             self.use_background = False
