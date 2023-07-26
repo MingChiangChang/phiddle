@@ -44,12 +44,9 @@ class labeler():
     def fit(self, q, d):
         self.q = q
         self.data = deepcopy(d)
-        if len(self.data) > 2048:
-            cs = CubicSpline(self.q, self.data)
-            q = np.linspace(q[0], q[-1], 2048)
-            data = cs(q)
+        
 
-        data = self.data #deepcopy(d)
+        data = deepcopy(d)
         tree = Lazytree(self.phases, self.q)
 
         if self.background_option == "MCBL":

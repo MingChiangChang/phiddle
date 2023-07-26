@@ -1,6 +1,7 @@
 import re
 
 import numpy as np
+from scipy.interpolate import CubicSpline
 import h5py
 
 from PyQt6.QtCore import Slot
@@ -77,8 +78,14 @@ class datamodel():
             if re.match(r'^I\d+=', line):
                 ind = int(line[1:line.index('=')]) - 1
                 self.data[ind] ={} 
-                self.data[ind]['data'] = np.tile(np.array(list(map(float, line[line.index('=')+1:].split(',')))), (151, 1)).T
-                self.data[ind]['q'] = self.q
+                d = np.array(list(map(float, line[line.index('=')+1:].split(',')))) 
+                q = self.q
+                if len(d) > 2048:
+                    q = np.linspace(self.q[0], self.q[-1], 2048)
+                    cs = CubicSpline(self.q, d)
+                    d = cs(q)
+                self.data[ind]['data'] = np.tile(d, (151, 1)).T
+                self.data[ind]['q'] = q
                 self.data[ind]['cond'] = "tau_0_T_0"
                 self.data[ind]['x'] = self.x[ind]
                 self.data[ind]['y'] = self.y[ind]
