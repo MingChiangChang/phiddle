@@ -31,7 +31,7 @@ class datamodel():
             self.conds[self._ind])
 
         self.x, self.y = collect_positions(self.h5, self.conds)
-        if 'cations' in list(self.h5[self.conds[0]].attrs):
+        if 'fracs' in list(self.h5[self.conds[0]].attrs):
             self.cations = self.h5[self.conds[0]].attrs['cations']
 
             self.fractions = np.zeros((len(self.conds), len(self.cations)))

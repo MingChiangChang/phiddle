@@ -190,7 +190,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def browse_csv_button_clicked(self):
         self.csv_path, _ = QFileDialog.getOpenFileName(
-            None, "Open csv", "", "CSV Files (*.csv)")
+                                 None, "Open csv", "", "CSV Files (*.csv)"
+                                 )
         if self.csv_path.endswith("csv"):
             self.labeler.read_csv(self.csv_path)
             self.cifview.update_cif_list(
