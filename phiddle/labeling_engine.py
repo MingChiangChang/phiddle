@@ -124,6 +124,7 @@ class labeler():
         self.results = [result]
         self.has_labeled = True
         self.label_ind = 0
+        self.t = [1.0]
         if self.background_option in ["None", "Default"]:
             self.bg = np.zeros(q.shape)
 
@@ -138,13 +139,13 @@ class labeler():
         self.label_ind += 1
         if self.label_ind == len(self.results):
             self.label_ind = 0
-        return self.label_ind + 1, self.results[self.label_ind], self.bg
+        return self.label_ind + 1, self.t[self.label_ind], self.results[self.label_ind], self.bg
 
     def previous_label_result(self):
         self.label_ind -= 1
         if self.label_ind < 0:
             self.label_ind = len(self.results) - 1
-        return self.label_ind + 1, self.results[self.label_ind], self.bg
+        return self.label_ind + 1, self.t[self.label_ind], self.results[self.label_ind], self.bg
 
     def get_phase_names(self, isChecked_ls):
         phase_names = [self.phases[idx].name for idx,

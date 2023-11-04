@@ -279,7 +279,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def label_button_clicked(self):
         self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
         self.stripeview.plot_label_result_w_spectra(
-            1, self.labeler.results[0], self.labeler.bg)
+            1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
 
     def label_w_phase_button_clicked(self):
         selected_phase_names = self.cifview.get_checked_phase_names()
@@ -288,7 +288,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                     self.stripeview.avg_pattern,
                                     selected_phase_names)
             self.stripeview.plot_label_result_w_spectra(
-                1, self.labeler.results[0], self.labeler.bg)
+                1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
 
     def save_residual(self):
         if not self.labeler.has_labeled:
@@ -350,13 +350,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def next_label_result(self):
         if self.labeler.has_labeled:
-            ind, result, bg = self.labeler.next_label_result()
-            self.stripeview.plot_label_result_w_spectra(ind, result, bg)
+            ind, confidence, result, bg = self.labeler.next_label_result()
+            self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
 
     def previous_label_result(self):
         if self.labeler.has_labeled:
-            ind, result, bg = self.labeler.previous_label_result()
-            self.stripeview.plot_label_result_w_spectra(ind, result, bg)
+            ind, confidence, result, bg = self.labeler.previous_label_result()
+            self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
 
     @property
     def ind(self):
