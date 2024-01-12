@@ -350,13 +350,37 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def next_label_result(self):
         if self.labeler.has_labeled:
-            ind, confidence, result, bg = self.labeler.next_label_result()
+            ind, confidence, result, fractions, bg = self.labeler.next_label_result()
             self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
+            print("############## Output ################")
+            print("")
+            print(f"{ind}th most probable result")
+            print(result.CPs)
+            print("")
+            print("Probability: {confidence}")
+            print("Fractions:")
+            for i, xi  in enumerate(fractions):
+                print(f"    {result.CPs[i].name}: {xi}")
+            print("")
+            print("#####################################")
+
+            
 
     def previous_label_result(self):
         if self.labeler.has_labeled:
-            ind, confidence, result, bg = self.labeler.previous_label_result()
+            ind, confidence, result, fractions, bg = self.labeler.previous_label_result()
             self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
+            print("############## Output ################")
+            print("")
+            print(f"{ind}th most probable result")
+            print(result.CPs)
+            print("")
+            print(f"Probability: {confidence}")
+            print("Fractions:")
+            for i, xi  in enumerate(fractions):
+                print(f"    {result.CPs[i].name}: {xi}")
+            print("")
+            print("#####################################")
 
     @property
     def ind(self):

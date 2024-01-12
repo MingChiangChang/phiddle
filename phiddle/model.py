@@ -37,8 +37,7 @@ class datamodel():
             self.fractions = np.zeros((len(self.conds), len(self.cations)))
             for i, _ in enumerate(self.cations):
                 for j, cond in enumerate(self.conds):
-                    self.fractions[j,
-                                   i] = self.h5[cond].attrs['fracs'][i][0]
+                    self.fractions[j, i] = self.h5[cond].attrs['fracs'][i][0]
 
         if 'xx' in list(self.h5[self.conds[0]].attrs):
             self.xx = []

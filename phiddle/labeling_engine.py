@@ -83,8 +83,21 @@ class labeler():
         t[t == -1] = m * np.random.rand(np.sum(t == -1))
         ind = np.argmax(t)
         self.t, self.results = zip(*sorted(zip(t, results), reverse=True))
+
+        fractions = get_fraction(self.results[0].phase_model.CPs)
+
+        print("############## Output ################")
+        print("")
         print("Labeling result:")
         print(self.results[0].phase_model.CPs)
+        print("")
+        print(f"Probability: {self.t[0]}")
+        print("Fractions:")
+        for i, xi in enumerate(fractions):
+            print(f"    {self.results[0].phase_model.CPs[i].name}: {xi}")
+        print("") 
+        print("#####################################")
+
         self.results = [result.phase_model for result in self.results]
 
         if self.background_option in ["None", "Default"]:
@@ -119,8 +132,19 @@ class labeler():
                                 self.std_noise, self.mean_θ, self.std_θ,
                                 optimize_mode=self.optimize_mode,
                                 maxiter=self.max_iter)
+        fractions = get_fraction(result.CPs)
+
+        print("############## Output ################")
+        print("")
         print("Refinement result:")
         print(result.CPs)
+        print("")
+        print("Fractions:")
+        for i, xi in enumerate(fractions):
+            print(f"    {result.CPs[i].name}: {xi}")
+        print("")
+        print("#####################################")
+
         self.results = [result]
         self.has_labeled = True
         self.label_ind = 0
@@ -139,13 +163,21 @@ class labeler():
         self.label_ind += 1
         if self.label_ind == len(self.results):
             self.label_ind = 0
-        return self.label_ind + 1, self.t[self.label_ind], self.results[self.label_ind], self.bg
+        return (self.label_ind + 1,
+                self.t[self.label_ind],
+                self.results[self.label_ind],
+                get_fraction(self.results[self.label_ind].CPs),
+                self.bg)
 
     def previous_label_result(self):
         self.label_ind -= 1
         if self.label_ind < 0:
             self.label_ind = len(self.results) - 1
-        return self.label_ind + 1, self.t[self.label_ind], self.results[self.label_ind], self.bg
+        return (self.label_ind + 1,
+                self.t[self.label_ind],
+                self.results[self.label_ind],
+                get_fraction(self.results[self.label_ind].CPs),
+                self.bg)
 
     def get_phase_names(self, isChecked_ls):
         phase_names = [self.phases[idx].name for idx,
