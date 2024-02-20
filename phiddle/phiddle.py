@@ -20,7 +20,8 @@ from util import index_phase
 from model import datamodel
 from stripeview import stripeview
 from globalview import globalview
-from labeling_engine import labeler
+#  from labeling_engine import labeler
+from labeler import labeler
 from cif_view import CIFView
 from phase_diagram import PhaseDiagramView, PhaseDiagramList
 from popup import Popup
@@ -60,7 +61,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.model.read_h5(h5_path)
             self.ind = 0
             self.update(self.ind)
-            self.labeler.read_csv(csv_path)
+            # self.labeler.read_csv(csv_path)
             self.cifview.update_cif_list(
                 [phase.name for phase in self.labeler.phases])
 
@@ -78,23 +79,23 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.cifview.checked.connect(self.update_sticks)
         self.cifview.add.connect(self.add_to_phase_diagram)
         self.phase_diagram_list.checked.connect(self.update_pd_plot)  # FIXME
-        self.popup.set_clicked.connect(self.update_labeler_hyperparams)
+        # self.popup.set_clicked.connect(self.update_labeler_hyperparams)
 
-        label_button = QPushButton()
-        label_button.setText("Label")
-        label_button.clicked.connect(self.label_button_clicked)
+        # label_button = QPushButton()
+        # label_button.setText("Label")
+        # label_button.clicked.connect(self.label_button_clicked)
 
-        label_w_phase_button = QPushButton()
-        label_w_phase_button.setText("Fit With Phase")
-        label_w_phase_button.clicked.connect(self.label_w_phase_button_clicked)
+        # label_w_phase_button = QPushButton()
+        # label_w_phase_button.setText("Fit With Phase")
+        # label_w_phase_button.clicked.connect(self.label_w_phase_button_clicked)
 
-        save_residual_button = QPushButton()
-        save_residual_button.setText("Save Residual")
-        save_residual_button.clicked.connect(self.save_residual)
+        # save_residual_button = QPushButton()
+        # save_residual_button.setText("Save Residual")
+        # save_residual_button.clicked.connect(self.save_residual)
 
-        save_button = QPushButton()
-        save_button.setText("Save")
-        save_button.clicked.connect(self.save_button_clicked)
+        # save_button = QPushButton()
+        # save_button.setText("Save")
+        # save_button.clicked.connect(self.save_button_clicked)
 
         back_button = QPushButton()
         back_button.setText("Back")
@@ -124,18 +125,18 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         load_progress_button.setText("Load Progress")
         load_progress_button.clicked.connect(self.load_progress_clicked)
 
-        labeler_setting_button = QPushButton()
-        labeler_setting_button.setText("Labeler Settings")
-        labeler_setting_button.clicked.connect(self.labeler_setting_clicked)
+        # labeler_setting_button = QPushButton()
+        # labeler_setting_button.setText("Labeler Settings")
+        # labeler_setting_button.clicked.connect(self.labeler_setting_clicked)
 
-        previous_label_result_button = QPushButton()
-        previous_label_result_button.setText("Previous Label Result")
-        previous_label_result_button.clicked.connect(
-            self.previous_label_result)
+        # previous_label_result_button = QPushButton()
+        # previous_label_result_button.setText("Previous Label Result")
+        # previous_label_result_button.clicked.connect(
+        #     self.previous_label_result)
 
-        next_label_result_button = QPushButton()
-        next_label_result_button.setText("Next Label Result")
-        next_label_result_button.clicked.connect(self.next_label_result)
+        # next_label_result_button = QPushButton()
+        # next_label_result_button.setText("Next Label Result")
+        # next_label_result_button.clicked.connect(self.next_label_result)
 
         top_button_layout = QHBoxLayout()
         top_button_layout.addWidget(browse_button)
@@ -143,15 +144,15 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         top_button_layout.addWidget(browse_cif_button)
         top_button_layout.addWidget(save_progress_button)
         top_button_layout.addWidget(load_progress_button)
-        top_button_layout.addWidget(labeler_setting_button)
-        top_button_layout.addWidget(previous_label_result_button)
-        top_button_layout.addWidget(next_label_result_button)
+        # top_button_layout.addWidget(labeler_setting_button)
+        # top_button_layout.addWidget(previous_label_result_button)
+        # top_button_layout.addWidget(next_label_result_button)
 
         bottom_button_layout = QHBoxLayout()
-        bottom_button_layout.addWidget(label_button)
-        bottom_button_layout.addWidget(label_w_phase_button)
-        bottom_button_layout.addWidget(save_residual_button)
-        bottom_button_layout.addWidget(save_button)
+        # bottom_button_layout.addWidget(label_button)
+        # bottom_button_layout.addWidget(label_w_phase_button)
+        # bottom_button_layout.addWidget(save_residual_button)
+        # bottom_button_layout.addWidget(save_button)
         bottom_button_layout.addWidget(back_button)
         bottom_button_layout.addWidget(next_button)
 
@@ -245,9 +246,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 self.logger.error(
                     f'ERROR: File in .json not found! Check if you have moved you file around')
 
-    def labeler_setting_clicked(self):
-        self.popup.set_default_text(*self.labeler.params)
-        self.popup.show()
+    # def labeler_setting_clicked(self):
+    #     self.popup.set_default_text(*self.labeler.params)
+    #     self.popup.show()
 
     def update(self, ind):
         self.ind = ind
@@ -260,8 +261,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 name = self.labeler.phases[idx].name
 
                 for j, peak in enumerate(self.labeler.phases[idx].peaks):
-                    sticks[j, 0] = peak.q
-                    sticks[j, 1] = peak.I
+                    sticks[j, 0] = peak[3]# .q
+                    sticks[j, 1] = peak[4]# .I
 
                 phases[name] = sticks
         self.stripeview.plot_cifs(phases)
@@ -276,47 +277,47 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         phase_dict = self.model.get_dict_for_phase_diagram()
         self.phase_diagram_view.plot(phase_dict, mask)
 
-    def label_button_clicked(self):
-        self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
-        self.stripeview.plot_label_result_w_spectra(
-            1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
+    # def label_button_clicked(self):
+    #     self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
+    #     self.stripeview.plot_label_result_w_spectra(
+    #         1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
 
-    def label_w_phase_button_clicked(self):
-        selected_phase_names = self.cifview.get_checked_phase_names()
-        if selected_phase_names:
-            self.labeler.fit_phases(self.stripeview.avg_q,
-                                    self.stripeview.avg_pattern,
-                                    selected_phase_names)
-            self.stripeview.plot_label_result_w_spectra(
-                1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
+    # def label_w_phase_button_clicked(self):
+    #     selected_phase_names = self.cifview.get_checked_phase_names()
+    #     if selected_phase_names:
+    #         self.labeler.fit_phases(self.stripeview.avg_q,
+    #                                 self.stripeview.avg_pattern,
+    #                                 selected_phase_names)
+    #         self.stripeview.plot_label_result_w_spectra(
+    #             1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
 
-    def save_residual(self):
-        if not self.labeler.has_labeled:
-            self.save_button_clicked()
-            return
-        filename = self.model.current_filename
-        d = np.vstack((self.stripeview.avg_q, self.labeler.residual))
-        fn, _ = QFileDialog.getSaveFileName(
-            self, 'Save Residual File', filename, "")
-        if fn.endswith('xy'):
-            np.savetxt(fn, d)
-        else:
-            np.save(fn, d)
+    # def save_residual(self):
+    #     if not self.labeler.has_labeled:
+    #         self.save_button_clicked()
+    #         return
+    #     filename = self.model.current_filename
+    #     d = np.vstack((self.stripeview.avg_q, self.labeler.residual))
+    #     fn, _ = QFileDialog.getSaveFileName(
+    #         self, 'Save Residual File', filename, "")
+    #     if fn.endswith('xy'):
+    #         np.savetxt(fn, d)
+    #     else:
+    #         np.save(fn, d)
 
-    def save_button_clicked(self):
-        filename = self.model.current_filename
-        d = np.vstack((self.stripeview.avg_q, self.stripeview.avg_pattern))
-        fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
+    # def save_button_clicked(self):
+    #     filename = self.model.current_filename
+    #     d = np.vstack((self.stripeview.avg_q, self.stripeview.avg_pattern))
+    #     fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
 
-        if self.labeler.has_labeled:
-            datadict = self.labeler.get_dict_for_storing()
-            with open(fn + '.json', 'w') as f:
-                json.dump(datadict, f)
-        else:
-            if fn.endswith('xy'):
-                np.savetxt(fn, d)
-            else:
-                np.save(fn, d)
+    #     if self.labeler.has_labeled:
+    #         datadict = self.labeler.get_dict_for_storing()
+    #         with open(fn + '.json', 'w') as f:
+    #             json.dump(datadict, f)
+    #     else:
+    #         if fn.endswith('xy'):
+    #             np.savetxt(fn, d)
+    #         else:
+    #             np.save(fn, d)
 
     def change_ind(self, change):
         self.ind += change
@@ -326,61 +327,61 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.model.add_to_phase_diagram(phase_names)
         # self.update(self.ind)
 
-    def update_labeler_hyperparams(
-            self,
-            std_noise,
-            mean,
-            std,
-            max_phase,
-            expand_degree,
-            background_length,
-            max_iter,
-            optimize_mode,
-            background_option):
-        self.labeler.set_hyperparams(
-            std_noise,
-            mean,
-            std,
-            max_phase,
-            expand_degree,
-            background_length,
-            max_iter,
-            optimize_mode,
-            background_option)
+    # def update_labeler_hyperparams(
+    #         self,
+    #         std_noise,
+    #         mean,
+    #         std,
+    #         max_phase,
+    #         expand_degree,
+    #         background_length,
+    #         max_iter,
+    #         optimize_mode,
+    #         background_option):
+    #     self.labeler.set_hyperparams(
+    #         std_noise,
+    #         mean,
+    #         std,
+    #         max_phase,
+    #         expand_degree,
+    #         background_length,
+    #         max_iter,
+    #         optimize_mode,
+    #         background_option)
 
-    def next_label_result(self):
-        if self.labeler.has_labeled:
-            ind, confidence, result, fractions, bg = self.labeler.next_label_result()
-            self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
-            print("############## Output ################")
-            print("")
-            print(f"{ind}th most probable result")
-            print(result.CPs)
-            print("")
-            print("Probability: {confidence}")
-            print("Fractions:")
-            for i, xi  in enumerate(fractions):
-                print(f"    {result.CPs[i].name}: {xi}")
-            print("")
-            print("#####################################")
+    # def next_label_result(self):
+    #     if self.labeler.has_labeled:
+    #         ind, confidence, result, fractions, bg = self.labeler.next_label_result()
+    #         self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
+    #         print("############## Output ################")
+    #         print("")
+    #         print(f"{ind}th most probable result")
+    #         print(result.CPs)
+    #         print("")
+    #         print("Probability: {confidence}")
+    #         print("Fractions:")
+    #         for i, xi  in enumerate(fractions):
+    #             print(f"    {result.CPs[i].name}: {xi}")
+    #         print("")
+    #         print("#####################################")
 
-            
+    #         
 
-    def previous_label_result(self):
-        if self.labeler.has_labeled:
-            ind, confidence, result, fractions, bg = self.labeler.previous_label_result()
-            self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
-            print("############## Output ################")
-            print("")
-            print(f"{ind}th most probable result")
-            print(result.CPs)
-            print("")
-            print(f"Probability: {confidence}")
-            print("Fractions:")
-            for i, xi  in enumerate(fractions):
-                print(f"    {result.CPs[i].name}: {xi}")
-            print("")
-            print("#####################################")
+    # def previous_label_result(self):
+    #     if self.labeler.has_labeled:
+    #         ind, confidence, result, fractions, bg = self.labeler.previous_label_result()
+    #         self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
+    #         print("############## Output ################")
+    #         print("")
+    #         print(f"{ind}th most probable result")
+    #         print(result.CPs)
+    #         print("")
+    #         print(f"Probability: {confidence}")
+    #         print("Fractions:")
+    #         for i, xi  in enumerate(fractions):
+    #             print(f"    {result.CPs[i].name}: {xi}")
+    #         print("")
+    #         print("#####################################")
 
     @property
     def ind(self):
@@ -394,7 +395,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             new_ind = self.model.size - 1
         self.model.ind = new_ind
         self._ind = self.model.ind  # let model do the cycling
-        self.labeler.has_labeled = False
+        # self.labeler.has_labeled = False
 
         self.stripeview.avg_pattern = None  # Not good
         self.stripeview.clear_figures()

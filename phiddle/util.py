@@ -79,3 +79,36 @@ def find_first_smaller(arr, value):
     for idx, val in enumerate(arr[::-1]):
         if val < value:
             return arr.shape[0] - idx
+
+
+# 
+def _get_strain(a, a0):
+    return (a-a0)/a0
+
+
+def _regularize(params, mean_θ, std_θ):
+    return (params-np.log(mean_θ)) / (np.sqrt(2)*std_θ)
+
+
+def extend_priors(mean_θ, std_θ, phases):
+
+    total_params = np.sum([c.free_param_num for c in phases])
+    full_mean_θ = np.zeros(total_params)
+    full_std_θ = np.zeros(total_params)
+    start = 0
+
+    for i, cs in enumerate(phases):
+        n = cs.cl.free_param_num
+        p = 1 if len(mean_θ)/3. == len(phases) else 1
+        full_mean_θ[start:start+n] = mean_θ[3*(p-1)] * np.array(cs.cl.get_free_params())
+        full_std_θ[start:start+n] = std_θ[3*(p-1)] * np.array(cs.cl.get_free_params())
+        full_mean_θ[start+n:start+n+2] = mean_θ[1+3*(p-1):3*p]
+        full_std_θ[start+n:start+n+2] = std_θ[1+3*(p-1):3*p]
+
+        if cs.peakprofile.free_param_num > 0:
+            full_mean_θ[start + n + 2] = 0.5
+            full_std_θ[start + n + 2] = 10.
+
+        start += cs.free_param_num
+
+    return full_mean_θ, full_std_θ
