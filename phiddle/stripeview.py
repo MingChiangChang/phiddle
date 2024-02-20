@@ -10,7 +10,7 @@ from matplotlib.collections import PatchCollection
 import matplotlib.lines as mlines
 
 from util import minmax_norm, COLORS, find_first_larger, find_first_smaller
-from pyPhaseLabel import evaluate_obj
+# from pyPhaseLabel import evaluate_obj
 
 
 class stripeview(FigureCanvasQTAgg):
@@ -243,54 +243,54 @@ class stripeview(FigureCanvasQTAgg):
 
         self.draw()
 
-    def plot_fit_result(self, ind, confidence, fit_result, bg=None):
-        # try:
-        #    fit_phase_model = fit_result.phase_model
-        # except AttributeError:
-        #    fit_phase_model = fit_result
+    # def plot_fit_result(self, ind, confidence, fit_result, bg=None):
+    #     # try:
+    #     #    fit_phase_model = fit_result.phase_model
+    #     # except AttributeError:
+    #     #    fit_phase_model = fit_result
 
-        fit = evaluate_obj(fit_result, self.avg_q)
+    #     fit = evaluate_obj(fit_result, self.avg_q)
 
-        phase_name = []
-        if np.sum(bg) != 0.:
-            fit += bg
-        else:
-            bg = evaluate_obj(fit_result.background, self.avg_q)
+    #     phase_name = []
+    #     if np.sum(bg) != 0.:
+    #         fit += bg
+    #     else:
+    #         bg = evaluate_obj(fit_result.background, self.avg_q)
 
-        self.spectra.plot(self.avg_q, fit, label="Fitted")
-        self.spectra.plot(self.avg_q, bg, label="background")
+    #     self.spectra.plot(self.avg_q, fit, label="Fitted")
+    #     self.spectra.plot(self.avg_q, bg, label="background")
 
-        for cp in fit_result.CPs:
-            self.spectra.plot(
-                self.avg_q, evaluate_obj(
-                    cp, self.avg_q), label=cp.name)
-            phase_name.append(cp.name)
+    #     for cp in fit_result.CPs:
+    #         self.spectra.plot(
+    #             self.avg_q, evaluate_obj(
+    #                 cp, self.avg_q), label=cp.name)
+    #         phase_name.append(cp.name)
 
-        self.spectra.set_title(f"No. {ind} " + ("_".join(phase_name)) + f" {confidence:.4f}")
-        self.spectra.legend(fontsize=7)
-        self.spectra.set_xlim((self.q[0], self.q[-1]))
-        self.spectra.set_ylim((-0.1, 1.1))
-        self.spectra.set_xlabel("q ($nm^{-1}$)")
-        self.spectra.set_ylabel("Avg intensity (a.u.)")
+    #     self.spectra.set_title(f"No. {ind} " + ("_".join(phase_name)) + f" {confidence:.4f}")
+    #     self.spectra.legend(fontsize=7)
+    #     self.spectra.set_xlim((self.q[0], self.q[-1]))
+    #     self.spectra.set_ylim((-0.1, 1.1))
+    #     self.spectra.set_xlabel("q ($nm^{-1}$)")
+    #     self.spectra.set_ylabel("Avg intensity (a.u.)")
 
-        self.draw()
+    #     self.draw()
 
-    def plot_label_result_w_spectra(self, ind, confidence, fit_result=None, bg=None):
-        self.spectra.clear()
-        if self.avg_pattern is None:
-            self.avg_pattern = minmax_norm(
-                self.data[:, round(self.data.shape[1] / 2)])
+    # def plot_label_result_w_spectra(self, ind, confidence, fit_result=None, bg=None):
+    #     self.spectra.clear()
+    #     if self.avg_pattern is None:
+    #         self.avg_pattern = minmax_norm(
+    #             self.data[:, round(self.data.shape[1] / 2)])
 
-        (self.avgplot, ) = self.spectra.plot(self.avg_q,
-                                             self.avg_pattern,
-                                             linewidth=2,
-                                             color='k',
-                                             label="XRD")
+    #     (self.avgplot, ) = self.spectra.plot(self.avg_q,
+    #                                          self.avg_pattern,
+    #                                          linewidth=2,
+    #                                          color='k',
+    #                                          label="XRD")
 
-        (self.spectra_select_box, ) = self.spectra.plot(
-            self.spectra_box_x, self.spectra_box_y, color='r')
+    #     (self.spectra_select_box, ) = self.spectra.plot(
+    #         self.spectra_box_x, self.spectra_box_y, color='r')
 
-        self.plot_fit_result(ind, confidence, fit_result, bg)
+    #     self.plot_fit_result(ind, confidence, fit_result, bg)
 
     def plot_cifs(self, sticks):
         """
