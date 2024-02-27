@@ -6,13 +6,16 @@ pip install .
 ```
 
 # TODOs
+- [ ] Allow phase diagram with 2d/3d + option selections
+- [ ] Output/save CrystalShift result
+- [ ] Option for phase diagram in main page
+- [ ] Try to merge infomration into wafer scatter plot
 - [x] Phase diagram 
 - [x] Phase diagram data structure
 - [x] Plot labeled point
 - [x] Loading h5
 - [x] Saving json 
 - [x] Add save phase diagram button
-- [ ] Allow 3d phase diagram
 - [x] Allow reading csv and cif
 - [x] Allow pip installation
 - [x] Add amorphous option
@@ -22,8 +25,6 @@ pip install .
 - [x] Allow fitting with selected phases
 - [x] Allow changing in Q range
 - [x] Advance setting tab for labeler (jump out window?)
-- [ ] Output/save CrystalShift result
-- [ ] Option for phase diagram in main page
 
 # Next level
 - [ ] Transfer learning model for clustering
