@@ -237,6 +237,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 self.model.read_h5(load_meta_data["h5_path"])
                 self.h5_path = load_meta_data["h5_path"]
                 self.labeler.read_csv(load_meta_data["csv_path"])
+                self.csv_path = load_meta_data["csv_path"]
                 self.cifview.update_cif_list(
                     [phase.name for phase in self.labeler.phases])
                 self.model.phases = load_meta_data["phases"]
