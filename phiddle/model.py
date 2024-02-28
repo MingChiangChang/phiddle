@@ -117,15 +117,23 @@ class datamodel():
     def get_dict_for_phase_diagram(self):
 
         phase_dict = {}
+        if not hasattr(self, 'phases'): 
+            return phase_dict
         for idx, phases in enumerate(self.phases):
             if phases:
                 for phase in phases:
                     if phase not in phase_dict:
                         phase_dict[phase] = {}
-                        phase_dict[phase]['dwell'] = []
-                        phase_dict[phase]['tpeak'] = []
-                    phase_dict[phase]['dwell'].append(self.dwells[idx])
-                    phase_dict[phase]['tpeak'].append(self.tpeaks[idx])
+                        phase_dict[phase]['Dwell'] = []
+                        phase_dict[phase]['Tpeak'] = []
+                        if hasattr(self, 'cations'):
+                            for j, cation in enumerate(self.cations):
+                                phase_dict[phase][cation] = []
+
+                    phase_dict[phase]['Dwell'].append(self.dwells[idx])
+                    phase_dict[phase]['Tpeak'].append(self.tpeaks[idx])
+                    for j, cation in enumerate(self.cations):
+                        phase_dict[phase][cation].append(self.fractions[idx][j])
         return phase_dict
 
     @property
