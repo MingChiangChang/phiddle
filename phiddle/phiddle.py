@@ -66,7 +66,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.phase_diagram_view = PhaseDiagramView()
         self.phase_diagram_list = PhaseDiagramList()
-        self.phase_diagram_list.save.connect(
+        self.phase_diagram_list.save_signal.connect(
             self.phase_diagram_view.save_phase_diagram)
         pd_layout = QHBoxLayout()
         pd_layout.addWidget(self.phase_diagram_view)
@@ -77,7 +77,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.globalview.picked.connect(self.update)
         self.cifview.checked.connect(self.update_sticks)
         self.cifview.add.connect(self.add_to_phase_diagram)
-        self.phase_diagram_list.checked.connect(self.update_pd_plot)  # FIXME
+        self.phase_diagram_list.checked_signal.connect(self.update_pd_plot)  # FIXME
+        self.phase_diagram_list.dim_change_signal.connect(self.phase_diagram_view.change_dim)
+        self.phase_diagram_list.axes_signal.connect(self.phase_diagram_view.change_axes)
         self.popup.set_clicked.connect(self.update_labeler_hyperparams)
 
         label_button = QPushButton()
@@ -181,6 +183,11 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
         if self.h5_path.endswith("h5"):
             self.model.read_h5(self.h5_path)
+            if hasattr(self.model, "cations"):
+                self.phase_diagram_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
+                for i, cation in enumerate(self.model.cations):
+                    self.phase_diagram_list.comp_str[i] = cation
+                self.phase_diagram_list.update_combo_boxes()
             self.ind = 0
             self.update(self.ind)
         elif self.h5_path.endswith("udi"):
@@ -235,6 +242,11 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                     and os.path.isfile(load_meta_data["csv_path"])):
 
                 self.model.read_h5(load_meta_data["h5_path"])
+                if hasattr(self.model, "cations"):
+                    self.phase_diagram_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
+                    for i, cation in enumerate(self.model.cations):
+                        self.phase_diagram_list.comp_str[i] = cation
+                    self.phase_diagram_list.update_combo_boxes()
                 self.h5_path = load_meta_data["h5_path"]
                 self.labeler.read_csv(load_meta_data["csv_path"])
                 self.csv_path = load_meta_data["csv_path"]
@@ -275,7 +287,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def update_pd_plot(self, mask):
         phase_dict = self.model.get_dict_for_phase_diagram()
-        self.phase_diagram_view.plot(phase_dict, mask)
+        self.phase_diagram_view.plot(phase_dict,
+                                     self.phase_diagram_list.get_current_axes(),
+                                     mask)
 
     def label_button_clicked(self):
         self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
