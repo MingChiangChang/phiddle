@@ -64,7 +64,6 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                                                color="#DFDFDF", #'k', #COLORS[((idx+1) % len(COLORS)-1)],
                                                alpha=1.)
 
-
             self.phase_diagram.set_xlim(xlim)
             self.phase_diagram.set_xlabel(xlabel)
             self.phase_diagram.set_xscale(xscale)
