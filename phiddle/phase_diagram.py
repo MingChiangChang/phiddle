@@ -37,6 +37,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
         self.phase_dict = phase_dict
         phase_name_ls = np.array(list(phase_dict))
         if mask:
+            others = phase_name_ls[np.logical_not(mask)]
             phase_name_ls = phase_name_ls[mask]
 
         
@@ -53,8 +54,16 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                 self.phase_diagram.scatter(phase_dict[phase][axes[0]],
                                            phase_dict[phase][axes[1]],
                                            label=phase,
-                                           color=COLORS[idx],
+                                           color=COLORS[((idx+1) % len(COLORS)-1)],
                                            alpha=0.5)
+            if mask:
+                for idx, phase in enumerate(others):
+                    self.phase_diagram.scatter(phase_dict[phase][axes[0]],
+                                               phase_dict[phase][axes[1]],
+                                               label="Other" if idx==0 else "_other",
+                                               color="#DFDFDF", #'k', #COLORS[((idx+1) % len(COLORS)-1)],
+                                               alpha=1.)
+
 
             self.phase_diagram.set_xlim(xlim)
             self.phase_diagram.set_xlabel(xlabel)
@@ -78,7 +87,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
 
             xlim, xlabel, xscale = self.get_3d_axis_info(axes[0])
             ylim, ylabel, yscale = self.get_3d_axis_info(axes[1])
-            zlim, zlabel, zscale = self.get_3d_axis_info(axes[2])
+            zlim, zlabel, zscale = self.get_3d_axis_info(axes[2]) # there's inconsistnecy here
             scales = [xscale, yscale, zscale]
 
             transform = []
@@ -94,9 +103,19 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                                            transform[1](phase_dict[phase][axes[1]]),
                                            zs = transform[2](phase_dict[phase][axes[2]]),
                                            label=phase,
-                                           color=COLORS[idx],
+                                           color=COLORS[((idx+1) % len(COLORS)-1)],
                                            s=50,
                                            alpha=0.5)
+            if mask:
+                for idx, phase in enumerate(others):
+                    self.phase_diagram.scatter(transform[0](phase_dict[phase][axes[0]]),
+                                               transform[1](phase_dict[phase][axes[1]]),
+                                               zs = transform[2](phase_dict[phase][axes[2]]),
+                                               label="Other" if idx==0 else "_other",
+                                               s=50,
+                                               color="#DFDFDF",#'k', #COLORS[((idx+1) % len(COLORS)-1)],
+                                               alpha=1.)
+
 
             self.phase_diagram.set_xlim(xlim)
             self.phase_diagram.set_xlabel(xlabel)
