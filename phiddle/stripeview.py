@@ -144,13 +144,12 @@ class stripeview(FigureCanvasQTAgg):
             q_min_ind = find_first_larger(self.q, self.bottomY)
             q_max_ind = find_first_smaller(self.q, self.topY)
 
-            if self.xx is not None:
-                x_min_ind = find_first_larger(self.xx, self.LeftX)
-                x_max_ind = find_first_larger(self.xx, self.RightX)
-            else:
-                x_min_ind = self.LeftX
-                x_max_ind = self.RightX
-
+            # if self.xx is not None:
+            x_min_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX))
+            x_max_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))
+            # else:
+            #     x_min_ind = self.LeftX
+            #     x_max_ind = self.RightX
             if self.LeftX == self.RightX:
                 self.avg_pattern = self.data[q_min_ind:q_max_ind, x_min_ind]
             else:
@@ -400,7 +399,7 @@ class stripeview(FigureCanvasQTAgg):
         else:
             _left = "$_{left}$"
             _right = "$_{right}$"
-            title += f" T{_left}: {int(t_left)}C T{_right}: {int(t_right)}"
+            title += f" T{_left}: {int(t_left)}C T{_right}: {int(t_right)}C"
 
         if self.comp_title:
             title += '\n'
@@ -415,3 +414,6 @@ class stripeview(FigureCanvasQTAgg):
             return self.temp_profile_func(_x_idx)
         return self.temp_profile_func(_x_idx*10) # 10 um per column
 
+
+    def transfrom_x_to_data_idx(self, idx):
+        return int(idx/len(self.xaxis) * self.data.shape[1])
