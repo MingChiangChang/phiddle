@@ -4,13 +4,17 @@ from copy import deepcopy
 
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.backend_bases import MouseButton
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 import matplotlib.lines as mlines
 
-from util import minmax_norm, COLORS, find_first_larger, find_first_smaller
+from util import (minmax_norm, COLORS, find_first_larger,
+                  find_first_smaller, two_lorentz)
 from pyPhaseLabel import evaluate_obj
+from temp_profile import LaserPowerMing_Spring2024, left_right_width
+from center_finder_asym import get_center_asym
 
 
 class stripeview(FigureCanvasQTAgg):
@@ -21,12 +25,15 @@ class stripeview(FigureCanvasQTAgg):
         self.setParent = parent
 
         gs = fig.add_gridspec(3, 2)
-        self.heatmap = fig.add_subplot(gs[:, 0])
+        self.heatmap = fig.add_subplot(gs[:-1, 0])
+        self.temp_profile = fig.add_subplot(gs[-1, 0])
         self.spectra = fig.add_subplot(gs[:2, 1])
         self.stick_patterns = fig.add_subplot(gs[-1, 1])
 
         self.bottomY = -100
         self.topY = 100
+        self.temp_bottomY = 0
+        self.temp_topY = 1414
 
         self.spectra_box_y = np.array([1.1, -0.1, -0.1, 1.1, 1.1])
         self.spectra_left_x = 0
@@ -49,6 +56,15 @@ class stripeview(FigureCanvasQTAgg):
                          self.LeftX], dtype=int)
 
     @property
+    def temp_y(self):
+        return np.array([self.temp_bottomY,
+                         self.temp_topY,
+                         self.temp_topY,
+                         self.temp_bottomY,
+                         self.temp_bottomY], dtype=int)
+
+
+    @property
     def y(self):
         return np.array([self.bottomY,
                          self.topY,
@@ -66,6 +82,7 @@ class stripeview(FigureCanvasQTAgg):
 
     def onclick(self, event):
 
+        # if event.button is MouseButton.LEFT:
         if event.inaxes in [self.heatmap]:
             self.LeftX = int(event.xdata)
             self.bottomY = 0  # int(event.ydata)
@@ -101,6 +118,7 @@ class stripeview(FigureCanvasQTAgg):
 
         if event.inaxes in [self.heatmap, self.spectra]:
             self.selection_box.set_xdata(self.x)
+            self.temp_selection_box.set_xdata(self.x)
             self.selection_box.set_ydata(self.y)
 
             self.aspan = self.heatmap.axvspan(
@@ -115,20 +133,31 @@ class stripeview(FigureCanvasQTAgg):
                 self.LeftX, self.RightX = self.RightX, self.LeftX
             if self.bottomY > self.topY:
                 self.bottomY, self.topY = self.topY, self.bottomY
+            if self.LeftX == self.RightX:
+                self.t = self.get_temperature(self.LeftX)
+                self.heatmap.set_title(self.get_title(self.t))
+            else:
+                self.t_left = self.get_temperature(self.LeftX)
+                self.t_right = self.get_temperature(self.RightX)
+                self.heatmap.set_title(self.get_title(self.t_left, self.t_right))
+                                       
             # Let this be here for now
             q_min_ind = find_first_larger(self.q, self.bottomY)
             q_max_ind = find_first_smaller(self.q, self.topY)
+
             if self.xx is not None:
                 x_min_ind = find_first_larger(self.xx, self.LeftX)
                 x_max_ind = find_first_larger(self.xx, self.RightX)
             else:
                 x_min_ind = self.LeftX
                 x_max_ind = self.RightX
+
             if self.LeftX == self.RightX:
                 self.avg_pattern = self.data[q_min_ind:q_max_ind, x_min_ind]
             else:
                 self.avg_pattern = np.mean(
                     self.data[q_min_ind:q_max_ind, x_min_ind:x_max_ind], axis=1)
+
             self.avg_q = self.q[q_min_ind:q_max_ind]
             self.avg_pattern = minmax_norm(self.avg_pattern)
             self.spectra.clear()
@@ -158,12 +187,15 @@ class stripeview(FigureCanvasQTAgg):
             self.RightX = int(event.xdata)
 
             self.selection_box.set_xdata(self.x)
+            self.temp_selection_box.set_xdata(self.x)
             self.selection_box.set_ydata(self.y)
             self.draw()
         elif event.inaxes == self.spectra:
             self.topY = event.xdata
             self.spectra_right_x = event.xdata
             self.selection_box.set_xdata(self.x)
+            print(self.x)
+            self.temp_selection_box.set_xdata(self.x)
             self.selection_box.set_ydata(self.y)
             self.spectra_select_box.set_xdata(self.spectra_box_x)
             self.draw()
@@ -171,6 +203,7 @@ class stripeview(FigureCanvasQTAgg):
     def clear_figures(self):
         self.heatmap.clear()
         self.spectra.clear()
+        self.temp_profile.clear()
 
         self.LeftX = 0
         self.bottomY = -100
@@ -189,16 +222,19 @@ class stripeview(FigureCanvasQTAgg):
         self.data = data['data']
         self.cond = data['cond']
         self.xx = xx
-        self.title = self.cond
+        self.tpeak, self.dwell = self.get_tpeak_dwell_from_cond(self.cond)
+        self.t_left = self.tpeak
+        self.temp_topY = self.tpeak
+        self.left_width, self.right_width = left_right_width(self.dwell, self.tpeak)
+        self.center = get_center_asym(self.data, self.left_width, self.right_width)
 
+        self.comp_title = ""
         if 'fracs' in data:
             self.fracs = data['fracs']
             self.cations = data['cations']
             for cation, frac in zip(self.cations, self.fracs):
-                self.title += f" {cation}:{frac[0]:.3f}"
+                self.comp_title += f" {cation}:{frac[0]:.3f}"
 
-        self.LeftX = 0  # round(self.data.shape[1]/2)
-        self.RightX = 0  # round(self.data.shape[1]/2)
         self.avg_q = deepcopy(self.q)
 
         self.spectra_left_x = np.min(self.q)
@@ -206,21 +242,51 @@ class stripeview(FigureCanvasQTAgg):
         (self.spectra_select_box, ) = self.spectra.plot(
             self.spectra_box_x, self.spectra_box_y, color='r')
 
-        (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
+        self.LeftX = 0
+        self.RightX = 0
         if self.xx is not None:
             xmin = self.xx[0]
             xmax = self.xx[-1]
+            # self.LeftX = self.center/self.data.shape[1]*(xmax-xmin)
+            # self.RightX = self.center/self.data.shape[1]*(xmax-xmin)
+            self.xaxis = np.arange(xmax-xmin)# (xmax-xmin)/2
+            self.xaxis -= self.xaxis[int(len(self.xaxis)*self.center/len(self.xx))]
             xlabel = "Location (um)"
         else:
             xmin = 0
             xmax = self.data.shape[1]
+            # self.LeftX = self.center # 0  # round(self.data.shape[1]/2)
+            # self.RightX = self.center # 0  # round(self.data.shape[1]/2)
+            self.xaxis = np.arange(xmax-xmin) * 10 # 10 um per column
+            self.xaxis -= self.xaxis[self.center]
             xlabel = "Index"
+
+        (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
+        (self.temp_selection_box, ) = self.temp_profile.plot(self.x, self.temp_y, color='r') 
+
+        self.temp_profile_func = two_lorentz(self.tpeak,
+                                             0.,
+                      #self.center/self.data.shape[1]*(xmax-xmin) - (xmax-xmin)/2,
+                      self.left_width, self.right_width)
+
         self.heatmap.imshow(self.data,
-                            extent=(xmin, xmax, self.q[-1], self.q[0]),
-                            aspect=(xmax - xmin) / (self.q[-1] - self.q[0]))
+                            # extent=(xmin, xmax, self.q[-1], self.q[0]),
+                            extent=(self.xaxis[0], self.xaxis[-1], self.q[-1], self.q[0]),
+                            # aspect=(xmax - xmin) / (self.q[-1] - self.q[0]))
+                            aspect = (self.xaxis[-1]-self.xaxis[0])/(self.q[-1]-self.q[0]))
+        self.heatmap.set_box_aspect(1)
+        self.title = self.get_title(t_left=self.t_left)
         self.heatmap.set_title(self.title)
-        self.heatmap.set_xlabel(xlabel)
+        # self.heatmap.set_xlabel(xlabel)
+        self.heatmap.set_xticks([])
         self.heatmap.set_ylabel("q ($nm^{-1}$)")
+
+        self.temp_profile.plot(self.xaxis, self.temp_profile_func(self.xaxis))
+        self.temp_profile.set_box_aspect(1/2)# (xmax - xmin) / self.tpeak /2.5)
+        self.temp_profile.set_xlabel(xlabel)
+        self.temp_profile.set_ylabel("Tpeak ($^o$C)")
+        self.temp_profile.set_xlim(np.min(self.xaxis), np.max(self.xaxis))
+        self.temp_profile.set_ylim(0, self.tpeak)
 
         self.aspan = self.heatmap.axvspan(
             self.LeftX, self.RightX, color='k', alpha=0)
@@ -322,3 +388,31 @@ class stripeview(FigureCanvasQTAgg):
         self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
         self.stick_patterns.set_ylim((0, 1))
         self.draw()
+
+    def get_tpeak_dwell_from_cond(self, cond):
+        s = cond.split('_')
+        return float(s[3]), float(s[1])
+
+    def get_title(self, t_left, t_right=None):
+
+        title = f"Tpeak: {int(self.tpeak)}C Dwell: {int(self.dwell)}us" 
+        if t_right is None:
+            title += f" T: {int(t_left)}C"
+        else:
+            _left = "$_{left}$"
+            _right = "$_{right}$"
+            title += f" T{_left}: {int(t_left)}C T{_right}: {int(t_right)}"
+
+        if self.comp_title:
+            title += '\n'
+            title += self.comp_title
+
+        return title
+
+    def get_temperature(self, x_idx):
+        # x_idx has different meaning depending on xx
+        _x_idx = np.array(x_idx)
+        if self.xx is not None:
+            return self.temp_profile_func(_x_idx)
+        return self.temp_profile_func(_x_idx*10) # 10 um per column
+
