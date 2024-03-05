@@ -4,6 +4,13 @@ import numpy as np
 COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
           '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#dd8dff', '#48971b']
 
+def lorentz(x, height, x_0, width_x):
+    return height / (1+((x-x_0)/width_x)**2)
+
+
+def two_lorentz(height, x_0, sigma_1, sigma_2):
+    return lambda x: ( lorentz(x, height, x_0, sigma_1)*(x<=x_0).astype(int)
+                     + lorentz(x, height, x_0, sigma_2)*(x>x_0).astype(int) )
 
 
 def collect_data_and_q(h5, conds):
