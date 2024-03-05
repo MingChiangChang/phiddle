@@ -8,7 +8,7 @@ import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtWidgets import (
     QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
-    QHBoxLayout, QLineEdit, QLabel, QFileDialog
+    QHBoxLayout, QLineEdit, QLabel, QFileDialog, QMenu
 )
 from matplotlib.backends.backend_qtagg import (
     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
@@ -36,6 +36,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         # Temperature fixed
         # menubar = self.menuBar()
         # fileMenu = menubar.addMenu("&File")
+        self._createMenuBar()
         self.logger = logging.getLogger(__name__)
         self.stripeview = stripeview()
         self.globalview = globalview()
@@ -179,6 +180,22 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.tabs.currentChanged.connect(self.update_pd_tab)
         self.setCentralWidget(self.tabs)
 
+
+    def _createMenuBar(self):
+        menuBar = self.menuBar()
+        # menuBar.setNativeMenuBar(False)
+        # Creating menus using a QMenu object
+        fileMenu = QMenu(" &File", self)
+        fileMenu.addAction("Browse data file")
+        fileMenu.addAction("Browse CIF files")
+        fileMenu.addAction("Browse CSV input file")
+        menuBar.addMenu(fileMenu)
+        # Creating menus using a title
+        editMenu = menuBar.addMenu(" &Edit")
+        editMenu.addAction("test")
+        helpMenu = menuBar.addMenu(" &Help")
+        helpMenu.addAction("test")
+
     def browse_button_clicked(self):
         self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
         if self.h5_path.endswith("h5"):
@@ -282,7 +299,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def update_pd_tab(self, tab_num):
         if tab_num == 1:
             phase_dict = self.model.get_dict_for_phase_diagram()
-            self.phase_diagram_view.plot(phase_dict)
+            self.phase_diagram_view.plot(phase_dict, self.phase_diagram_list.get_current_axes())
             self.phase_diagram_list.show(list(phase_dict))
 
     def update_pd_plot(self, mask):
@@ -420,16 +437,11 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.globalview.plot(
             self.model.dwells,
             self.model.tpeaks,
-            self.model.labeled_dwells,
-            self.model.labeled_tpeaks,
-            self.model.current_dwell,
-            self.model.current_tpeak,
             self.model.x,
             self.model.y,
-            self.model.labeled_x,
-            self.model.labeled_y,
-            self.model.current_x,
-            self.model.current_y)
+            self.model.labeled,
+            self.model.current,
+            )
         try:
             existing_phase_ind = index_phase(
                 self.model.phases[new_ind], self.labeler.phase_names)
