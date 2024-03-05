@@ -6,10 +6,10 @@ pip install .
 ```
 
 # TODOs
-- [ ] Allow phase diagram with 2d/3d + option selections
+- [x] Allow phase diagram with 2d/3d + option selections
 - [ ] Output/save CrystalShift result
 - [ ] Option for phase diagram in main page
-- [ ] Try to merge infomration into wafer scatter plot
+- [x] Try to merge infomration into wafer scatter plot
 - [x] Phase diagram 
 - [x] Phase diagram data structure
 - [x] Plot labeled point
