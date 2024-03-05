@@ -97,15 +97,15 @@ class datamodel():
         self.current_dwell = 0
         self.current_tpeak = 0
         self.conds = ["tau_0_T_0" for _ in range(self.size)]
-
-
                     
 
     def update(self, ind):
         self.ind = ind
 
+
     def add_to_phase_diagram(self, phase_names):
         self.phases[self._ind] = phase_names
+
 
     def __getitem__(self, ind):
         if not ind in self.data: 
@@ -114,8 +114,8 @@ class datamodel():
             data = self.data[ind]
         return data
 
-    def get_dict_for_phase_diagram(self):
 
+    def get_dict_for_phase_diagram(self):
         phase_dict = {}
         if not hasattr(self, 'phases'): 
             return phase_dict
@@ -136,29 +136,62 @@ class datamodel():
                         phase_dict[phase][cation].append(self.fractions[idx][j])
         return phase_dict
 
+
     @property
     def labeled(self):
         return [bool(phase) for phase in self.phases]
 
     @property
+    def current(self):
+        tmp = np.zeros(len(self.data))
+        tmp[self.ind] = 1
+        tmp = tmp.astype(bool)
+        return tmp
+
+    @property
     def labeled_dwells(self):
         return self.dwells[self.labeled]
+
 
     @property
     def labeled_tpeaks(self):
         return self.tpeaks[self.labeled]
 
+
     @property
     def labeled_x(self):
         return self.x[self.labeled]
+
 
     @property
     def labeled_y(self):
         return self.y[self.labeled]
 
+
+    @property
+    def unlabeled_dwells(self):
+        return self.dwells[np.logical_not(self.labeled)]
+
+
+    @property
+    def unlabeled_tpeaks(self):
+        return self.tpeaks[np.logical_not(self.labeled)]
+
+
+    @property
+    def unlabeled_x(self):
+        return self.x[np.logical_not(self.labeled)]
+
+
+    @property
+    def unlabeled_y(self):
+        return self.y[np.logical_not(self.labeled)]
+
+
     @property
     def current_data(self):
         return self.__getitem__(self.ind)
+
 
     @property
     def current_xx(self):
@@ -166,9 +199,11 @@ class datamodel():
             return self.xx[self.ind]
         return None
 
+
     @property
     def ind(self):
         return self._ind
+
 
     @ind.setter
     def ind(self, new_ind):
@@ -178,13 +213,16 @@ class datamodel():
         self.current_dwell, self.current_tpeak = get_condition(
             self.conds[new_ind])
 
+
     @property
     def current_x(self):
         return self.x[self._ind]
 
+
     @property
     def current_y(self):
         return self.y[self._ind]
+
 
     @property
     def current_filename(self):
