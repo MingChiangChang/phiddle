@@ -21,6 +21,9 @@ class globalview(FigureCanvasQTAgg):
         gs = self.fig.add_gridspec(1, 2)
         self.condition_map = self.fig.add_subplot(gs[0, 0])  # , picker=1)
         self.wafer_map = self.fig.add_subplot(gs[0, 1])  # , picker=1)
+        self.fig.subplots_adjust(right=0.9)
+        self.cbar_ax = self.fig.add_axes([0.92, 0.15, 0.02, 0.7])
+
 
         self.cid1 = self.mpl_connect('pick_event', self.on_pick)
         self.cmap = 'inferno'
@@ -33,6 +36,7 @@ class globalview(FigureCanvasQTAgg):
     def clear_figures(self):
         self.condition_map.clear()
         self.wafer_map.clear()
+        self.cbar_ax.clear()
 
     def plot(self, dwells, tpeaks, x, y,
              labeled, current): 
@@ -64,12 +68,14 @@ class globalview(FigureCanvasQTAgg):
         dwell_size -= np.min(dwell_size)
         dwell_size /= np.max(dwell_size)
 
+        print(np.min(tpeaks), np.max(tpeaks))
         self.location_artist = self.wafer_map.scatter(
-            x, y, c=tpeaks, s=8, picker=True, alpha=0.,
-            vmin=np.min(tpeaks), vmax=np.max(tpeaks))
+            x, y, c=tpeaks, s=8, picker=True, alpha=0.)
         im = self.wafer_map.scatter(x[labeled], y[labeled], 
-                                    s=20*dwell_size[labeled]+8,
-                               c=tpeaks[labeled], picker=0., cmap=self.cmap)
+                               s=20*dwell_size[labeled]+8,
+                               c=tpeaks[labeled], picker=0., cmap=self.cmap,
+                               vmin=np.min(tpeaks), vmax=np.max(tpeaks))
+
         self.wafer_map.scatter(x[unlabeled], y[unlabeled], s=20*dwell_size[unlabeled]+8,
                                c=tpeaks[unlabeled],
                                marker='x', picker=0., cmap=self.cmap)
@@ -80,8 +86,9 @@ class globalview(FigureCanvasQTAgg):
                                )
         self.wafer_map.set_xlabel("x (mm)")
         self.wafer_map.set_ylabel("y (mm)")
-        self.fig.subplots_adjust(right=0.9)
-        cbar_ax = self.fig.add_axes([0.92, 0.15, 0.02, 0.7])
-        self.fig.colorbar(im, cax=cbar_ax)
+        # self.fig.subplots_adjust(right=0.9)
+        # self.cbar_ax = self.fig.add_axes([0.92, 0.15, 0.02, 0.7])
+        self.fig.colorbar(im, cax=self.cbar_ax)
+        self.cbar_ax.set_label("$^oC$")
 
         self.draw()

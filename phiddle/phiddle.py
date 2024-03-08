@@ -206,7 +206,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                     self.phase_diagram_list.comp_str[i] = cation
                 self.phase_diagram_list.update_combo_boxes()
             self.ind = 0
-            self.update(self.ind)
+            # self.update(self.ind)
         elif self.h5_path.endswith("udi"):
             self.model.read_udi(self.h5_path)
             self.ind = 0
