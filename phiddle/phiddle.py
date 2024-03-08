@@ -87,8 +87,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         label_button.setText("Label")
         label_button.clicked.connect(self.label_button_clicked)
 
+        fit_w_phase_button = QPushButton()
+        fit_w_phase_button.setText("Fit With Phase")
+        fit_w_phase_button.clicked.connect(self.fit_w_phase_button_clicked)
+
         label_w_phase_button = QPushButton()
-        label_w_phase_button.setText("Fit With Phase")
+        label_w_phase_button.setText("Label With Phase")
         label_w_phase_button.clicked.connect(self.label_w_phase_button_clicked)
 
         save_residual_button = QPushButton()
@@ -153,6 +157,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         bottom_button_layout = QHBoxLayout()
         bottom_button_layout.addWidget(label_button)
         bottom_button_layout.addWidget(label_w_phase_button)
+        bottom_button_layout.addWidget(fit_w_phase_button)
         bottom_button_layout.addWidget(save_residual_button)
         bottom_button_layout.addWidget(save_button)
         bottom_button_layout.addWidget(back_button)
@@ -313,7 +318,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.stripeview.plot_label_result_w_spectra(
             1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
 
-    def label_w_phase_button_clicked(self):
+    def fit_w_phase_button_clicked(self):
         selected_phase_names = self.cifview.get_checked_phase_names()
         if selected_phase_names:
             self.labeler.fit_phases(self.stripeview.avg_q,
@@ -321,6 +326,16 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                     selected_phase_names)
             self.stripeview.plot_label_result_w_spectra(
                 1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
+
+    def label_w_phase_button_clicked(self):
+        selected_phase_names = self.cifview.get_checked_phase_names()
+        if selected_phase_names:
+            self.labeler.fit(self.stripeview.avg_q,
+                                    self.stripeview.avg_pattern,
+                                    selected_phase_names)
+            self.stripeview.plot_label_result_w_spectra(
+                1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
+
 
     def save_residual(self):
         if not self.labeler.has_labeled:

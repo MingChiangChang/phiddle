@@ -1,12 +1,14 @@
+import operator
 from copy import deepcopy
+
 import numpy as np
 from scipy.interpolate import CubicSpline
 
 from pyPhaseLabel import PhaseModel, CrystalPhase, EQ, BackgroundModel, FixedPseudoVoigt
 from pyPhaseLabel import create_phases, evaluate_obj, optimize_phase, Lorentz, PseudoVoigt
-from julia.Main import Wildcard, Lazytree, search, get_probabilities, get_fraction
+from julia.Main import Wildcard, Lazytree, search_b, get_probabilities, get_fraction, optimize_b
 from julia.BackgroundSubtraction import mcbl
-
+from julia import CrystalShift as CS
 
 class labeler():
 
@@ -25,7 +27,7 @@ class labeler():
         self.expand_k = 2
         self.use_background = False
         self.background_option = "MCBL"
-        self.optimize_mode = "Simple"
+        self.optimize_mode = CS.Simple
         self.background_length = 8.
         self.max_iter = 512
 
@@ -41,13 +43,18 @@ class labeler():
 
         self.phase_names = [phase.name for phase in self.phases]
 
-    def fit(self, q, d):
+    def fit(self, q, d, selected_phase_names = None):
         self.q = q
         self.data = deepcopy(d)
+
+        if selected_phase_names is not None:
+            phase_indices = self.get_subset_phases_idx_from_names(selected_phase_names)
+        else:
+            phase_indices = np.arange(len(self.phases))
         
 
         data = deepcopy(d)
-        tree = Lazytree(self.phases, self.q)
+        tree = Lazytree([self.phases[i] for i in phase_indices], self.q)
 
         if self.background_option == "MCBL":
             self.use_background = False
@@ -61,23 +68,17 @@ class labeler():
         # data -= np.min(data)
         norm = np.max(data)
         data /= norm
-        result = search(tree, q, data,
-                        self.max_phase, self.expand_k, .1, False,
+        result = search_b(tree, q, data,
+                        self.max_phase, self.expand_k, False,
                         self.use_background, self.background_length,
                         self.std_noise, self.mean_θ, self.std_θ,
-                        optimize_mode="Simple",
+                        optimize_mode=self.optimize_mode,
                         em_loop_num=5,
                         maxiter=self.max_iter,
                         regularization=True)
 
         results = [r for subresults in result[1:] for r in subresults]
-        t = get_probabilities(
-            results,
-            q,
-            data,
-            self.std_noise,
-            self.mean_θ,
-            self.std_θ)
+        t = get_probabilities(results, q, data, self.std_noise, self.mean_θ, self.std_θ)
         t[t == 0] = -1          # Trick to remove identical elements
         m = np.min(np.abs(t))  # Replace with tiny random number
         t[t == -1] = m * np.random.rand(np.sum(t == -1))
@@ -132,7 +133,7 @@ class labeler():
         data /= norm
 
         pm = PhaseModel(phases, None, bg)
-        result = optimize_phase(pm, q, data,
+        result = optimize_b(pm, q, data,
                                 self.std_noise, self.mean_θ, self.std_θ,
                                 optimize_mode=self.optimize_mode,
                                 maxiter=self.max_iter)
@@ -196,6 +197,14 @@ class labeler():
                 self.expand_k, self.background_length, self.max_iter,
                 self.optimize_mode, self.background_option)
 
+    def get_subset_phases_idx_from_names(self, phase_names):
+        idx = []
+        for i, phase in enumerate(self.phases):
+            if phase.name in phase_names:
+                idx.append(i)
+
+        return idx
+
     def set_hyperparams(self, std_noise, mean, std, max_phase,
                         expand_k, background_length, max_iter,
                         optimize_mode, background_option):
@@ -207,8 +216,15 @@ class labeler():
         self.expand_k = expand_k
         self.background_length = background_length
         self.max_iter = max_iter
-        self.optimize_mode = optimize_mode
-        self.background_option = background_option
+        self.optimize_mode = self.get_optimize_mode(optimize_mode)
+        self.background_option = background_options
+
+    def get_optimize_mode(optimize_mode_str):
+        if optimize_mode_str == "Simple":
+            return CS.Simple
+        if optimize_mode_str == "EM":
+            return CS.EM
+
 
     def get_phase_w_phase_names(self, phase_names):
         return [self.phases[self.phase_names.index(
