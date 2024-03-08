@@ -82,7 +82,6 @@ class stripeview(FigureCanvasQTAgg):
 
     def onclick(self, event):
 
-        # if event.button is MouseButton.LEFT:
         if event.inaxes in [self.heatmap]:
             self.LeftX = int(event.xdata)
             self.bottomY = 0  # int(event.ydata)
@@ -97,6 +96,8 @@ class stripeview(FigureCanvasQTAgg):
 
             self.moving = True
         elif event.inaxes in [self.spectra]:
+
+            self._clicked_x = event.x
             self.bottomY = event.xdata
             self.spectra_left_x = event.xdata
             try:
@@ -106,7 +107,15 @@ class stripeview(FigureCanvasQTAgg):
 
             self.moving = True
 
+
     def onrelease(self, event):
+
+        if event.inaxes in [self.spectra] and event.button is MouseButton.RIGHT and event.x == self._clicked_x:
+            self.spectra.set_xlim((self.q[0], self.q[-1]))
+            self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+            self.draw()
+            return
+
         if event.inaxes in [self.heatmap]:
             self.RightX = int(event.xdata)
             self.bottomY = 0  # int(event.ydata)
@@ -160,15 +169,24 @@ class stripeview(FigureCanvasQTAgg):
             self.avg_q = self.q[q_min_ind:q_max_ind]
             self.avg_pattern = minmax_norm(self.avg_pattern)
             self.spectra.clear()
+
             self.spectra.plot(
                 self.avg_q,
                 self.avg_pattern,
                 color='k',
                 linewidth=2,
-                label="XRD")
+                label="XRD") 
+          
             (self.spectra_select_box, ) = self.spectra.plot(
                 self.spectra_box_x, self.spectra_box_y, color='r')
-            self.spectra.set_xlim((self.q[0], self.q[-1]))
+
+            if event.button is MouseButton.LEFT:
+                self.spectra.set_xlim((self.q[0], self.q[-1]))
+                self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+            elif event.button is MouseButton.RIGHT:
+                self.spectra.set_xlim((self.avg_q[0], self.avg_q[-1]))
+                self.stick_patterns.set_xlim((self.avg_q[0], self.avg_q[-1]))
+
             self.spectra.set_ylim((-0.1, 1.1))
             self.spectra.set_ylabel("Avg intensity (a.u.)")
             self.spectra.legend(fontsize=7)
@@ -179,7 +197,7 @@ class stripeview(FigureCanvasQTAgg):
             return
         if event.inaxes is None:
             return
-        if event.button != 1:
+        if event.button not in [MouseButton.RIGHT, MouseButton.LEFT]:
             return
 
         if event.inaxes == self.heatmap:
@@ -193,7 +211,6 @@ class stripeview(FigureCanvasQTAgg):
             self.topY = event.xdata
             self.spectra_right_x = event.xdata
             self.selection_box.set_xdata(self.x)
-            print(self.x)
             self.temp_selection_box.set_xdata(self.x)
             self.selection_box.set_ydata(self.y)
             self.spectra_select_box.set_xdata(self.spectra_box_x)
@@ -297,6 +314,7 @@ class stripeview(FigureCanvasQTAgg):
                                              self.avg_pattern, linewidth=2, color='k', label="XRD")
         self.spectra.legend(fontsize=7)
         self.spectra.set_xlim((self.q[0], self.q[-1]))
+        self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
         self.spectra.set_ylim((-0.1, 1.1))
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         self.spectra.set_ylabel("Avg intensity (a.u.)")
