@@ -111,26 +111,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         next_button.setText("Next")
         next_button.clicked.connect(lambda: self.change_ind(1))
 
-        browse_button = QPushButton()
-        browse_button.setText("Browse data file")
-        browse_button.clicked.connect(self.browse_button_clicked)
-
-        browse_csv_button = QPushButton()
-        browse_csv_button.setText("Browse CSV input files")
-        browse_csv_button.clicked.connect(self.browse_csv_button_clicked)
-
-        browse_cif_button = QPushButton()
-        browse_cif_button.setText("Browse CIF files")
-        browse_cif_button.clicked.connect(self.browse_cif_button_clicked)
-
-        save_progress_button = QPushButton()
-        save_progress_button.setText("Save Progress")
-        save_progress_button.clicked.connect(self.save_progress_clicked)
-
-        load_progress_button = QPushButton()
-        load_progress_button.setText("Load Progress")
-        load_progress_button.clicked.connect(self.load_progress_clicked)
-
         labeler_setting_button = QPushButton()
         labeler_setting_button.setText("Labeler Settings")
         labeler_setting_button.clicked.connect(self.labeler_setting_clicked)
@@ -145,11 +125,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         next_label_result_button.clicked.connect(self.next_label_result)
 
         top_button_layout = QHBoxLayout()
-        top_button_layout.addWidget(browse_button)
-        top_button_layout.addWidget(browse_csv_button)
-        top_button_layout.addWidget(browse_cif_button)
-        top_button_layout.addWidget(save_progress_button)
-        top_button_layout.addWidget(load_progress_button)
         top_button_layout.addWidget(labeler_setting_button)
         top_button_layout.addWidget(previous_label_result_button)
         top_button_layout.addWidget(next_label_result_button)
@@ -191,9 +166,26 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         # menuBar.setNativeMenuBar(False)
         # Creating menus using a QMenu object
         fileMenu = QMenu(" &File", self)
-        fileMenu.addAction("Browse data file")
-        fileMenu.addAction("Browse CIF files")
-        fileMenu.addAction("Browse CSV input file")
+        browse_data_file_act = QtGui.QAction("Browse Data File", self)
+        browse_data_file_act.triggered.connect(self.browse_button_clicked)
+        browse_csv_file_act = QtGui.QAction("Browse CSV Input File", self)
+        browse_csv_file_act.triggered.connect(self.browse_csv_button_clicked)
+        browse_cif_file_act = QtGui.QAction("Browse CIF Files", self)
+        browse_cif_file_act.triggered.connect(self.browse_cif_button_clicked)
+
+        fileMenu.addAction(browse_data_file_act)
+        fileMenu.addAction(browse_cif_file_act)
+        fileMenu.addAction(browse_csv_file_act)
+        fileMenu.addSeparator()
+        save_progress_act = QtGui.QAction("Save Progress", self)
+        save_progress_act.triggered.connect(self.save_progress_clicked)
+        load_progress_act = QtGui.QAction("Load Progress", self)
+        load_progress_act.triggered.connect(self.load_progress_clicked)
+        fileMenu.addAction(save_progress_act)
+        fileMenu.addAction(load_progress_act)
+
+
+
         menuBar.addMenu(fileMenu)
         # Creating menus using a title
         editMenu = menuBar.addMenu(" &Edit")
@@ -315,7 +307,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def label_button_clicked(self):
         self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
-        self.stripeview.plot_label_result_w_spectra(
+        self.stripeview.plot_n_store_label_result_w_spectra(
             1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
 
     def fit_w_phase_button_clicked(self):
@@ -324,7 +316,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.labeler.fit_phases(self.stripeview.avg_q,
                                     self.stripeview.avg_pattern,
                                     selected_phase_names)
-            self.stripeview.plot_label_result_w_spectra(
+            self.stripeview.plot_n_store_label_result_w_spectra(
                 1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
 
     def label_w_phase_button_clicked(self):
@@ -333,7 +325,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.labeler.fit(self.stripeview.avg_q,
                                     self.stripeview.avg_pattern,
                                     selected_phase_names)
-            self.stripeview.plot_label_result_w_spectra(
+            self.stripeview.plot_n_store_label_result_w_spectra(
                 1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
 
 
@@ -398,7 +390,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def next_label_result(self):
         if self.labeler.has_labeled:
             ind, confidence, result, fractions, bg = self.labeler.next_label_result()
-            self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
+            self.stripeview.plot_n_store_label_result_w_spectra(ind, confidence, result, bg)
             print("############## Output ################")
             print("")
             print(f"{ind}th most probable result")
@@ -416,7 +408,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def previous_label_result(self):
         if self.labeler.has_labeled:
             ind, confidence, result, fractions, bg = self.labeler.previous_label_result()
-            self.stripeview.plot_label_result_w_spectra(ind, confidence, result, bg)
+            self.stripeview.plot_n_store_label_result_w_spectra(ind, confidence, result, bg)
             print("############## Output ################")
             print("")
             print(f"{ind}th most probable result")

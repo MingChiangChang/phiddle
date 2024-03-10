@@ -10,7 +10,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 import matplotlib.lines as mlines
 
-from util import (minmax_norm, COLORS, find_first_larger,
+from util import (minmax_norm, minmax_denorm, COLORS, find_first_larger,
                   find_first_smaller, two_lorentz)
 from pyPhaseLabel import evaluate_obj
 from temp_profile import LaserPowerMing_Spring2024, left_right_width
@@ -35,17 +35,21 @@ class stripeview(FigureCanvasQTAgg):
         self.temp_bottomY = 0
         self.temp_topY = 1414
 
-        self.spectra_box_y = np.array([1.1, -0.1, -0.1, 1.1, 1.1])
+        self.spectra_box_y = np.array([1.1, -1.1, -1.1, 1.1, 1.1])
         self.spectra_left_x = 0
         self.spectra_right_x = 1024
 
         self.avg_pattern = None
         self.avg_q = None
         self.moving = False
+        self._min = 0
+        self._max = 1
 
         self.cid1 = self.mpl_connect("button_press_event", self.onclick)
         self.cid2 = self.mpl_connect("button_release_event", self.onrelease)
         self.cid3 = self.mpl_connect("motion_notify_event", self.onmotion)
+
+        self.fit_result = None
 
     @property
     def x(self):
@@ -110,9 +114,22 @@ class stripeview(FigureCanvasQTAgg):
 
     def onrelease(self, event):
 
-        if event.inaxes in [self.spectra] and event.button is MouseButton.RIGHT and event.x == self._clicked_x:
+        if ((event.inaxes in [self.spectra])  # Detect moveless right clicks 
+                and (event.button is MouseButton.RIGHT)
+                and (event.x == self._clicked_x)):
+            self.spectra.clear()
+            self.spectra_left_x = np.min(self.q)
+            self.spectra_right_x = np.max(self.q)
+            (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
+
+            self.plot_label_result_w_spectra()
             self.spectra.set_xlim((self.q[0], self.q[-1]))
             self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+            self.avg_q = deepcopy(self.q)
+            if self.x_min_ind == self.x_max_ind:
+                self.avg_pattern = self.data[:, self.x_min_ind]
+            else:
+                self.avg_pattern = np.mean(self.data[:, self.x_min_ind:self.x_max_ind], axis=1)
             self.draw()
             return
 
@@ -154,32 +171,26 @@ class stripeview(FigureCanvasQTAgg):
             q_min_ind = find_first_larger(self.q, self.bottomY)
             q_max_ind = find_first_smaller(self.q, self.topY)
 
-            # if self.xx is not None:
-            x_min_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX))
-            x_max_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))
-            # else:
-            #     x_min_ind = self.LeftX
-            #     x_max_ind = self.RightX
+            self.x_min_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX))
+            self.x_max_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))
+
+            
             if self.LeftX == self.RightX:
-                self.avg_pattern = self.data[q_min_ind:q_max_ind, x_min_ind]
+                self.avg_pattern = self.data[q_min_ind:q_max_ind, self.x_min_ind]
             else:
                 self.avg_pattern = np.mean(
-                    self.data[q_min_ind:q_max_ind, x_min_ind:x_max_ind], axis=1)
-
+                    self.data[q_min_ind:q_max_ind, self.x_min_ind:self.x_max_ind], axis=1)
             self.avg_q = self.q[q_min_ind:q_max_ind]
-            self.avg_pattern = minmax_norm(self.avg_pattern)
+            pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
+
             self.spectra.clear()
+            (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
 
-            self.spectra.plot(
-                self.avg_q,
-                self.avg_pattern,
-                color='k',
-                linewidth=2,
-                label="XRD") 
-          
-            (self.spectra_select_box, ) = self.spectra.plot(
-                self.spectra_box_x, self.spectra_box_y, color='r')
+            self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
 
+            if self.fit_result is not None:
+                self.plot_scaled_results(_min, _max, q_min_ind, q_max_ind)
+            
             if event.button is MouseButton.LEFT:
                 self.spectra.set_xlim((self.q[0], self.q[-1]))
                 self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
@@ -187,7 +198,7 @@ class stripeview(FigureCanvasQTAgg):
                 self.spectra.set_xlim((self.avg_q[0], self.avg_q[-1]))
                 self.stick_patterns.set_xlim((self.avg_q[0], self.avg_q[-1]))
 
-            self.spectra.set_ylim((-0.1, 1.1))
+            self.spectra.set_ylim((-0.3, 1.1))
             self.spectra.set_ylabel("Avg intensity (a.u.)")
             self.spectra.legend(fontsize=7)
             self.draw()
@@ -211,7 +222,7 @@ class stripeview(FigureCanvasQTAgg):
             self.topY = event.xdata
             self.spectra_right_x = event.xdata
             self.selection_box.set_xdata(self.x)
-            self.temp_selection_box.set_xdata(self.x)
+            # self.temp_selection_box.set_xdata(self.x)
             self.selection_box.set_ydata(self.y)
             self.spectra_select_box.set_xdata(self.spectra_box_x)
             self.draw()
@@ -226,17 +237,38 @@ class stripeview(FigureCanvasQTAgg):
         self.RightX = 0
         self.topY = 100
 
-    def plot_new_data(
-            self,
-            data,
-            xx=None,
-            stick_patterns=None,
-            fit_result=None):
+    def plot_scaled_results(self, _min, _max, q_min_ind, q_max_ind):
+        self.bg_in_range = deepcopy(self.bg)
+        fit = evaluate_obj(self.fit_result.CPs, self.fitted_q)
+        fit += self.bg_in_range
+        fit = self.rescale(fit, _min, _max)
+        self.bg_in_range = self.rescale(self.bg_in_range, _min, _max)
+        
+        phase_name = []
+        self.spectra.plot(self.fitted_q, fit, label="Fitted")
+        self.spectra.plot(self.fitted_q, self.bg_in_range, label="background")
+        
+        for cp in self.fit_result.CPs:
+            tmp = evaluate_obj(cp, self.fitted_q)
+            tmp *= self._max / _max
+            self.spectra.plot(self.fitted_q, tmp, label=cp.name)
+            phase_name.append(cp.name)
+        
+        self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_name)) + f" {self.confidence:.4f}")
+        self.spectra.legend(fontsize=7)
+        self.spectra.set_xlabel("q ($nm^{-1}$)")
+        res = self.rescale(self.fitted_pattern, _min, _max)
+        res = res - fit# [q_min_ind:q_max_ind]
+        self.spectra.plot(self.fitted_q, (res - .2), label="residual", c='k')
+
+
+    def plot_new_data(self, data, xx=None, stick_patterns=None):
         """ This will include initializing some attributes like self.q """
         self.clear_figures()
         self.q = data['q']
         self.data = data['data']
         self.cond = data['cond']
+        self.fit_result = None
         self.xx = xx
         self.tpeak, self.dwell = self.get_tpeak_dwell_from_cond(self.cond)
         self.t_left = self.tpeak
@@ -263,16 +295,12 @@ class stripeview(FigureCanvasQTAgg):
         if self.xx is not None:
             xmin = self.xx[0]
             xmax = self.xx[-1]
-            # self.LeftX = self.center/self.data.shape[1]*(xmax-xmin)
-            # self.RightX = self.center/self.data.shape[1]*(xmax-xmin)
             self.xaxis = np.arange(xmax-xmin)# (xmax-xmin)/2
             self.xaxis -= self.xaxis[int(len(self.xaxis)*self.center/len(self.xx))]
             xlabel = "Location (um)"
         else:
             xmin = 0
             xmax = self.data.shape[1]
-            # self.LeftX = self.center # 0  # round(self.data.shape[1]/2)
-            # self.RightX = self.center # 0  # round(self.data.shape[1]/2)
             self.xaxis = np.arange(xmax-xmin) * 10 # 10 um per column
             self.xaxis -= self.xaxis[self.center]
             xlabel = "Index"
@@ -282,23 +310,19 @@ class stripeview(FigureCanvasQTAgg):
 
         self.temp_profile_func = two_lorentz(self.tpeak,
                                              0.,
-                      #self.center/self.data.shape[1]*(xmax-xmin) - (xmax-xmin)/2,
                       self.left_width, self.right_width)
 
         self.heatmap.imshow(self.data,
-                            # extent=(xmin, xmax, self.q[-1], self.q[0]),
                             extent=(self.xaxis[0], self.xaxis[-1], self.q[-1], self.q[0]),
-                            # aspect=(xmax - xmin) / (self.q[-1] - self.q[0]))
                             aspect = (self.xaxis[-1]-self.xaxis[0])/(self.q[-1]-self.q[0]))
         self.heatmap.set_box_aspect(1)
         self.title = self.get_title(t_left=self.t_left)
         self.heatmap.set_title(self.title)
-        # self.heatmap.set_xlabel(xlabel)
         self.heatmap.set_xticks([])
         self.heatmap.set_ylabel("q ($nm^{-1}$)")
 
         self.temp_profile.plot(self.xaxis, self.temp_profile_func(self.xaxis))
-        self.temp_profile.set_box_aspect(1/2)# (xmax - xmin) / self.tpeak /2.5)
+        self.temp_profile.set_box_aspect(1/2)
         self.temp_profile.set_xlabel(xlabel)
         self.temp_profile.set_ylabel("Tpeak ($^o$C)")
         self.temp_profile.set_xlim(np.min(self.xaxis), np.max(self.xaxis))
@@ -308,64 +332,67 @@ class stripeview(FigureCanvasQTAgg):
             self.LeftX, self.RightX, color='k', alpha=0)
 
         if self.avg_pattern is None:
-            self.avg_pattern = minmax_norm(
-                self.data[:, round(self.data.shape[1] / 2)])
+            self.avg_pattern = self.data[:, round(self.data.shape[1] / 2)] # FIXME: change to center of t profile
         (self.avgplot, ) = self.spectra.plot(self.avg_q,
-                                             self.avg_pattern, linewidth=2, color='k', label="XRD")
+                                             minmax_norm(self.avg_pattern)[0],
+                                             linewidth=2, color='k', label="XRD")
         self.spectra.legend(fontsize=7)
         self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
-        self.spectra.set_ylim((-0.1, 1.1))
+        self.spectra.set_ylim((-0.3, 1.1))
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         self.spectra.set_ylabel("Avg intensity (a.u.)")
-
-        self.draw()
 
         if stick_patterns is not None:
             self.plot_cifs(cif_patterns)
 
         self.draw()
 
-    def plot_fit_result(self, ind, confidence, fit_result, bg=None):
-        # try:
-        #    fit_phase_model = fit_result.phase_model
-        # except AttributeError:
-        #    fit_phase_model = fit_result
-
-        fit = evaluate_obj(fit_result, self.avg_q)
+    def plot_fit_result(self):
+        fit = evaluate_obj(self.fit_result.CPs, self.fitted_q)
 
         phase_name = []
-        if np.sum(bg) != 0.:
-            fit += bg
+        if np.sum(self.bg) != 0.:
+            fit += self.bg
         else:
-            bg = evaluate_obj(fit_result.background, self.avg_q)
+            self.bg = evaluate_obj(self.fit_result.background, self.fitted_q)
+            fit += self.bg
 
-        self.spectra.plot(self.avg_q, fit, label="Fitted")
-        self.spectra.plot(self.avg_q, bg, label="background")
+        self.spectra.plot(self.fitted_q, fit, label="Fitted")
+        self.spectra.plot(self.fitted_q, self.bg, label="background")
 
-        for cp in fit_result.CPs:
-            self.spectra.plot(
-                self.avg_q, evaluate_obj(
-                    cp, self.avg_q), label=cp.name)
+        for cp in self.fit_result.CPs:
+            self.spectra.plot(self.fitted_q, evaluate_obj(cp, self.fitted_q), label=cp.name)
             phase_name.append(cp.name)
 
-        self.spectra.set_title(f"No. {ind} " + ("_".join(phase_name)) + f" {confidence:.4f}")
+        self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_name)) + f" {self.confidence:.4f}")
         self.spectra.legend(fontsize=7)
         self.spectra.set_xlim((self.q[0], self.q[-1]))
-        self.spectra.set_ylim((-0.1, 1.1))
+        self.spectra.set_ylim((-0.3, 1.1))
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         self.spectra.set_ylabel("Avg intensity (a.u.)")
+        self.spectra.plot(self.fitted_q, (self.fitted_pattern - fit - .2), label="residual", c='k')
 
         self.draw()
 
-    def plot_label_result_w_spectra(self, ind, confidence, fit_result=None, bg=None):
-        self.spectra.clear()
-        if self.avg_pattern is None:
-            self.avg_pattern = minmax_norm(
-                self.data[:, round(self.data.shape[1] / 2)])
+    def plot_n_store_label_result_w_spectra(self, ind, confidence, fit_result=None, bg=None):
+        self.fitted_q = deepcopy(self.avg_q)
+        self.fitted_pattern, self._min, self._max = minmax_norm(self.avg_pattern)
+        self.ind = ind
+        self.confidence = confidence
+        self.fit_result = fit_result
+        self.bg = bg
 
-        (self.avgplot, ) = self.spectra.plot(self.avg_q,
-                                             self.avg_pattern,
+        self.plot_label_result_w_spectra()
+
+    def plot_label_result_w_spectra(self):
+        self.spectra.clear()
+
+        if self.avg_pattern is None:
+            self.avg_pattern = self.data[:, round(self.data.shape[1] / 2)]
+        
+        (self.avgplot, ) = self.spectra.plot(self.fitted_q,
+                                             self.fitted_pattern,
                                              linewidth=2,
                                              color='k',
                                              label="XRD")
@@ -373,7 +400,7 @@ class stripeview(FigureCanvasQTAgg):
         (self.spectra_select_box, ) = self.spectra.plot(
             self.spectra_box_x, self.spectra_box_y, color='r')
 
-        self.plot_fit_result(ind, confidence, fit_result, bg)
+        self.plot_fit_result()
 
     def plot_cifs(self, sticks):
         """
@@ -436,3 +463,8 @@ class stripeview(FigureCanvasQTAgg):
 
     def transfrom_x_to_data_idx(self, idx):
         return int(idx/len(self.xaxis) * self.data.shape[1])
+
+    def rescale(self, d, _min, _max):
+        d = minmax_denorm(d, self._min, self._max)
+        return  (d - _min) / _max
+

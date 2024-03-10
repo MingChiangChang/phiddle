@@ -67,9 +67,15 @@ def collect_positions(h5, conds):  # pass conds to make sure the order is correc
 
 
 def minmax_norm(data):
-    _data = data - np.min(data)
-    _data /= np.max(_data)
-    return _data
+    _min = np.min(data)
+    _data = data - _min 
+    _max = np.max(_data)
+    _data /= _max
+    return _data, _min, _max
+
+def minmax_denorm(data, _min, _max):
+    return data*_max + _min
+
 
 
 def index_phase(phase_names, phase_ls):

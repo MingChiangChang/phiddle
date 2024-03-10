@@ -132,8 +132,9 @@ class datamodel():
 
                     phase_dict[phase]['Dwell'].append(self.dwells[idx])
                     phase_dict[phase]['Tpeak'].append(self.tpeaks[idx])
-                    for j, cation in enumerate(self.cations):
-                        phase_dict[phase][cation].append(self.fractions[idx][j])
+                    if hasattr(self, 'cations'):
+                        for j, cation in enumerate(self.cations):
+                            phase_dict[phase][cation].append(self.fractions[idx][j])
         return phase_dict
 
 

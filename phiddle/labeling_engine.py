@@ -10,6 +10,8 @@ from julia.Main import Wildcard, Lazytree, search_b, get_probabilities, get_frac
 from julia.BackgroundSubtraction import mcbl
 from julia import CrystalShift as CS
 
+from util import minmax_norm
+
 class labeler():
 
     def __init__(self):
@@ -26,8 +28,8 @@ class labeler():
         self.max_phase = 1
         self.expand_k = 2
         self.use_background = False
-        self.background_option = "MCBL"
-        self.optimize_mode = CS.Simple
+        self.background_option = "MCBL" # FIXME: using MCBL leads to bad activation
+        self.optimize_mode = "Simple"
         self.background_length = 8.
         self.max_iter = 512
 
@@ -46,6 +48,7 @@ class labeler():
     def fit(self, q, d, selected_phase_names = None):
         self.q = q
         self.data = deepcopy(d)
+        print(f"min: {np.min(self.data)}, max: {np.max(self.data)}")
 
         if selected_phase_names is not None:
             phase_indices = self.get_subset_phases_idx_from_names(selected_phase_names)
@@ -54,6 +57,7 @@ class labeler():
         
 
         data = deepcopy(d)
+        data, _min, _max = minmax_norm(data)
         tree = Lazytree([self.phases[i] for i in phase_indices], self.q)
 
         if self.background_option == "MCBL":
@@ -65,17 +69,15 @@ class labeler():
             self.use_background = True
         if self.background_option == "None":
             self.use_background = False
-        # data -= np.min(data)
-        norm = np.max(data)
-        data /= norm
+
         result = search_b(tree, q, data,
-                        self.max_phase, self.expand_k, False,
-                        self.use_background, self.background_length,
-                        self.std_noise, self.mean_θ, self.std_θ,
-                        optimize_mode=self.optimize_mode,
-                        em_loop_num=5,
-                        maxiter=self.max_iter,
-                        regularization=True)
+                     self.max_phase, self.expand_k, False,
+                     self.use_background, self.background_length,
+                     self.std_noise, self.mean_θ, self.std_θ,
+                     optimize_mode=self.get_optimize_enum(self.optimize_mode),
+                     em_loop_num=5,
+                     maxiter=self.max_iter,
+                     regularization=True)
 
         results = [r for subresults in result[1:] for r in subresults]
         t = get_probabilities(results, q, data, self.std_noise, self.mean_θ, self.std_θ)
@@ -117,6 +119,7 @@ class labeler():
         self.q = q
         self.data = deepcopy(d)
         data = deepcopy(d)
+        data, _min, _max = minmax_norm(data)
         phases = self.get_phase_w_phase_names(phase_names)
 
         if self.background_option == "MCBL":
@@ -129,13 +132,15 @@ class labeler():
         else:
             bg = None
         # data -= np.min(data)
-        norm = np.max(data)
-        data /= norm
+        # self.bg -= _min
+        # self.bg /= _max
+        # norm = np.max(data)
+        # data /= norm
 
         pm = PhaseModel(phases, None, bg)
         result = optimize_b(pm, q, data,
                                 self.std_noise, self.mean_θ, self.std_θ,
-                                optimize_mode=self.optimize_mode,
+                                optimize_mode=self.get_optimize_enum(self.optimize_mode),
                                 maxiter=self.max_iter)
         fractions = get_fraction(result.CPs)
 
@@ -216,14 +221,8 @@ class labeler():
         self.expand_k = expand_k
         self.background_length = background_length
         self.max_iter = max_iter
-        self.optimize_mode = self.get_optimize_mode(optimize_mode)
-        self.background_option = background_options
-
-    def get_optimize_mode(optimize_mode_str):
-        if optimize_mode_str == "Simple":
-            return CS.Simple
-        if optimize_mode_str == "EM":
-            return CS.EM
+        self.optimize_mode = optimize_mode
+        self.background_option = background_option
 
 
     def get_phase_w_phase_names(self, phase_names):
@@ -269,3 +268,9 @@ class labeler():
         c_dict["β"] = cl.β * 180 / np.pi
         c_dict["γ"] = cl.γ * 180 / np.pi
         return c_dict
+
+    def get_optimize_enum(self, optimize_mode_str):
+        if optimize_mode_str == "Simple":
+            return CS.Simple
+        if optimize_mode_str == "EM":
+            return CS.EM
