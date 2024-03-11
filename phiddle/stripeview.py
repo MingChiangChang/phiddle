@@ -200,7 +200,7 @@ class stripeview(FigureCanvasQTAgg):
 
             self.spectra.set_ylim((-0.3, 1.1))
             self.spectra.set_ylabel("Avg intensity (a.u.)")
-            self.spectra.legend(fontsize=7)
+            self.spectra.legend(fontsize=7, loc="upper right")
             self.draw()
 
     def onmotion(self, event):
@@ -255,11 +255,11 @@ class stripeview(FigureCanvasQTAgg):
             phase_name.append(cp.name)
         
         self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_name)) + f" {self.confidence:.4f}")
-        self.spectra.legend(fontsize=7)
+        self.spectra.legend(fontsize=7, loc="upper right")
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         res = self.rescale(self.fitted_pattern, _min, _max)
         res = res - fit# [q_min_ind:q_max_ind]
-        self.spectra.plot(self.fitted_q, (res - .2), label="residual", c='k')
+        self.spectra.plot(self.fitted_q, (res - .2), label="residual", c='grey')
 
 
     def plot_new_data(self, data, xx=None, stick_patterns=None):
@@ -336,7 +336,7 @@ class stripeview(FigureCanvasQTAgg):
         (self.avgplot, ) = self.spectra.plot(self.avg_q,
                                              minmax_norm(self.avg_pattern)[0],
                                              linewidth=2, color='k', label="XRD")
-        self.spectra.legend(fontsize=7)
+        self.spectra.legend(fontsize=7, loc="upper right")
         self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
         self.spectra.set_ylim((-0.3, 1.1))
@@ -366,12 +366,12 @@ class stripeview(FigureCanvasQTAgg):
             phase_name.append(cp.name)
 
         self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_name)) + f" {self.confidence:.4f}")
-        self.spectra.legend(fontsize=7)
+        self.spectra.legend(fontsize=7, loc="upper right")
         self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.spectra.set_ylim((-0.3, 1.1))
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         self.spectra.set_ylabel("Avg intensity (a.u.)")
-        self.spectra.plot(self.fitted_q, (self.fitted_pattern - fit - .2), label="residual", c='k')
+        self.spectra.plot(self.fitted_q, (self.fitted_pattern - fit - .2), label="residual", c='grey')
 
         self.draw()
 
@@ -428,7 +428,7 @@ class stripeview(FigureCanvasQTAgg):
             self.stick_patterns.add_collection(pc)
 
         self.stick_patterns.plot()
-        self.stick_patterns.legend(handles=proxies, fontsize=7)
+        self.stick_patterns.legend(handles=proxies, fontsize=7, loc="upper right")
         self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
         self.stick_patterns.set_ylim((0, 1))
         self.draw()
