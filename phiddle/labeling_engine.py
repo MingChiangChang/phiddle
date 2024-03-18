@@ -161,6 +161,7 @@ class labeler():
         self.t = [1.0]
         if self.background_option in ["None", "Default"]:
             self.bg = np.zeros(q.shape)
+        return result 
 
     @property
     def residual(self):
@@ -227,7 +228,7 @@ class labeler():
 
     def get_phase_w_phase_names(self, phase_names):
         return [self.phases[self.phase_names.index(
-            phase_name)] for phase_name in phase_names]
+            phase_name)] for phase_name in phase_names if phase_name != "Amorphous"]
 
     def get_dict_for_storing(self):
         datadict = {}

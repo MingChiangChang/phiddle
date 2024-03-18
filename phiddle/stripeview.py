@@ -122,9 +122,17 @@ class stripeview(FigureCanvasQTAgg):
             self.spectra_right_x = np.max(self.q)
             (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
 
-            self.plot_label_result_w_spectra()
+            if self.fit_result is not None:
+                self.plot_label_result_w_spectra()
+            else:
+                (self.avgplot, ) = self.spectra.plot(self.avg_q, # FIXME: Limited ranges, not the desired behavior
+                                             minmax_norm(self.avg_pattern)[0],
+                                             linewidth=2, color='k', label="XRD")
+            self.spectra.legend(fontsize=7, loc="upper right")
+
             self.spectra.set_xlim((self.q[0], self.q[-1]))
             self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+
             self.avg_q = deepcopy(self.q)
             if self.x_min_ind == self.x_max_ind:
                 self.avg_pattern = self.data[:, self.x_min_ind]
@@ -274,7 +282,7 @@ class stripeview(FigureCanvasQTAgg):
         self.t_left = self.tpeak
         self.temp_topY = self.tpeak
         self.left_width, self.right_width = left_right_width(self.dwell, self.tpeak)
-        self.center = get_center_asym(self.data, self.left_width, self.right_width)
+        self.center = get_center_asym(self.data, self.left_width, self.right_width) # FIXME: This should be handled a layer higher
 
         self.comp_title = ""
         if 'fracs' in data:

@@ -126,17 +126,25 @@ class datamodel():
                         phase_dict[phase] = {}
                         phase_dict[phase]['Dwell'] = []
                         phase_dict[phase]['Tpeak'] = []
+                        phase_dict[phase]['idx'] = []
                         if hasattr(self, 'cations'):
                             for j, cation in enumerate(self.cations):
                                 phase_dict[phase][cation] = []
 
                     phase_dict[phase]['Dwell'].append(self.dwells[idx])
                     phase_dict[phase]['Tpeak'].append(self.tpeaks[idx])
+                    phase_dict[phase]['idx'].append(idx)
                     if hasattr(self, 'cations'):
                         for j, cation in enumerate(self.cations):
                             phase_dict[phase][cation].append(self.fractions[idx][j])
         return phase_dict
 
+
+    def get_index_with_phase(self, phase):
+        return [i for i, p in enumerate(self.phases) if phase in p]
+
+    def get_labeled_phases(self, idx):
+        return [self.phases[i] for i in idx]
 
     @property
     def labeled(self):
@@ -149,6 +157,7 @@ class datamodel():
         tmp = tmp.astype(bool)
         return tmp
 
+    # FIXME: A lot of followings can be removed
     @property
     def labeled_dwells(self):
         return self.dwells[self.labeled]

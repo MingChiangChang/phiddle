@@ -14,18 +14,21 @@ from matplotlib.backends.backend_qtagg import (
     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
 from matplotlib.figure import Figure
 import h5py
+from tqdm import tqdm
 
 
-from util import index_phase
+from util import index_phase, minmax_norm
 from model import datamodel
 from stripeview import stripeview
 from globalview import globalview
 from labeling_engine import labeler
 from cif_view import CIFView
 from phase_diagram import PhaseDiagramView, PhaseDiagramList
+from lattice_param_view import LatticeParamView, LatticeParamList
 from popup import Popup
 from cif_to_input_file import cif_to_input
-
+from center_finder_asym import get_center_asym
+from temp_profile import LaserPowerMing_Spring2024, left_right_width
 
 class TopLevelWindow(QtWidgets.QMainWindow):
 
@@ -33,24 +36,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                  h5_path=None,  # "data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
                  csv_path=None):  # "/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv" ):
         super().__init__()
-        # Temperature fixed
-        # menubar = self.menuBar()
-        # fileMenu = menubar.addMenu("&File")
         self._createMenuBar()
         self.logger = logging.getLogger(__name__)
         self.stripeview = stripeview()
         self.globalview = globalview()
-        # self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
-        # if self.h5_path.endswith("h5"):
-        #    self.model = datamodel(self.h5_path)
         self.h5_path = h5_path
         self.csv_path = csv_path
-        # self.cif_path, _ = QFileDialog.getOpenFileName(None, "Open cif", "", "")
-        # if self.cif_path.endswith("csv"):
-        #    self.labeler = labeler(self.cif_path)
-        # self.model = datamodel(self.h5_path)
-        # self.labeler = labeler(self.cif_path)
-        # self.cifview = CIFView([phase.name for phase in self.labeler.phases])
         self.model = datamodel()
         self.labeler = labeler()
         self.cifview = CIFView([])
@@ -75,12 +66,24 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         pd_layout.setStretch(0, 3)
         pd_layout.setStretch(1, 1)
 
+        self.lattice_param_view = LatticeParamView()
+        self.lattice_param_list = LatticeParamList()
+        # self.lattice_param_list.save_signal.connect(
+        #     self.phase_diagram_view.save_phase_diagram)
+        lp_layout = QHBoxLayout()
+        lp_layout.addWidget(self.lattice_param_view)
+        lp_layout.addWidget(self.lattice_param_list)
+        lp_layout.setStretch(0, 3)
+        lp_layout.setStretch(1, 1)
+
+
         self.globalview.picked.connect(self.update)
         self.cifview.checked.connect(self.update_sticks)
         self.cifview.add.connect(self.add_to_phase_diagram)
         self.phase_diagram_list.checked_signal.connect(self.update_pd_plot)  # FIXME
         self.phase_diagram_list.dim_change_signal.connect(self.phase_diagram_view.change_dim)
         self.phase_diagram_list.axes_signal.connect(self.phase_diagram_view.change_axes)
+        self.lattice_param_list.phase_selection_box.currentTextChanged.connect(self.lp_phase_changed)
         self.popup.set_clicked.connect(self.update_labeler_hyperparams)
 
         label_button = QPushButton()
@@ -154,10 +157,15 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         widget.setLayout(outer_layout)
         pd_widget = QWidget()
         pd_widget.setLayout(pd_layout)
+        lp_widget = QWidget()
+        lp_widget.setLayout(lp_layout)
+
         self.tabs = QTabWidget()
         self.tabs.addTab(widget, "Labeler")
         self.tabs.addTab(pd_widget, "Phase Map")
+        self.tabs.addTab(lp_widget, "Lattice Param")
         self.tabs.currentChanged.connect(self.update_pd_tab)
+        self.tabs.currentChanged.connect(self.update_lp_tab)
         self.setCentralWidget(self.tabs)
 
 
@@ -202,12 +210,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 for i, cation in enumerate(self.model.cations):
                     self.phase_diagram_list.comp_str[i] = cation
                 self.phase_diagram_list.update_combo_boxes()
+                self.lattice_param_list.update_phase_combo_box()
             self.ind = 0
             # self.update(self.ind)
         elif self.h5_path.endswith("udi"):
             self.model.read_udi(self.h5_path)
             self.ind = 0
-            self.update(self.ind)
+            self.update(self.ind) # FIXME: This should tell us how many dimension is allowed
 
     def browse_csv_button_clicked(self):
         self.csv_path, _ = QFileDialog.getOpenFileName(
@@ -261,6 +270,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                     for i, cation in enumerate(self.model.cations):
                         self.phase_diagram_list.comp_str[i] = cation
                     self.phase_diagram_list.update_combo_boxes()
+                    # self.lattice_param_list.update_phase_combo_box()
                 self.h5_path = load_meta_data["h5_path"]
                 self.labeler.read_csv(load_meta_data["csv_path"])
                 self.csv_path = load_meta_data["csv_path"]
@@ -293,17 +303,66 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 phases[name] = sticks
         self.stripeview.plot_cifs(phases)
 
-    def update_pd_tab(self, tab_num):
+    def update_tab(self, tab_num):
         if tab_num == 1:
-            phase_dict = self.model.get_dict_for_phase_diagram()
-            self.phase_diagram_view.plot(phase_dict, self.phase_diagram_list.get_current_axes())
-            self.phase_diagram_list.show(list(phase_dict))
+            self.update_pd_tab()
+        if tab_num == 2:
+            self.update_lp_tab()
+
+
+    def update_pd_tab(self):
+        phase_dict = self.model.get_dict_for_phase_diagram()
+        self.phase_diagram_view.plot(phase_dict,
+                                     self.phase_diagram_list.get_current_axes())
+        self.phase_diagram_list.show(list(phase_dict))
 
     def update_pd_plot(self, mask):
         phase_dict = self.model.get_dict_for_phase_diagram()
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
                                      mask)
+
+    def update_lp_tab(self):
+        phase_dict = self.model.get_dict_for_phase_diagram()
+        # self.lattice_param_view.plot_defualt(phase_dict,
+        #                                 self.lattice_param_list.get_current_axes())
+        phase_names = list(phase_dict)
+        if "Amorphous" in phase_names:
+            phase_names.remove("Amorphous")
+        phase_names.insert(0, "")
+        self.lattice_param_list.update_phase_combo_box(phase_names)
+
+    def lp_phase_changed(self, phase):
+        if phase == "":
+            return
+        indicies = self.model.get_index_with_phase(phase)
+        phase_ls = self.model.get_labeled_phases(indicies)
+
+        refined_result = []
+        for i, phases in tqdm(zip(indicies, phase_ls)):
+            data = self.model[i]
+            left_width, right_width = left_right_width(self.model.tpeaks[i], self.model.dwells[i])
+            center = get_center_asym(data['data'], left_width, right_width)
+            y, _, _ = minmax_norm(data['data'][:, center])
+            q = data['q']
+            res = self.labeler.fit_phases(q, y, phases)
+            for cp in res.CPs:
+                if cp.name == phase:
+                    refined_result.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
+
+        tpeak = [self.model.tpeaks[i] for i in indicies]
+        dwell = [self.model.dwells[i] for i in indicies]
+        self.lattice_param_view.plot(tpeak, dwell, np.array(refined_result))
+
+            
+
+    def update_lp_plot(self, mask):
+        phase_dict = self.model.get_dict_for_phase_diagram()
+        self.lattice_param_view.plot(phase_dict,
+                                     self.phase_diagram_list.get_current_axes(),
+                                     mask)
+
+
 
     def label_button_clicked(self):
         self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
