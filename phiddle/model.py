@@ -44,6 +44,8 @@ class datamodel():
             for idx, cond in enumerate(self.conds):
                 self.xx.append(self.h5[cond].attrs['xx'])
         self.phases = ["" for i in range(len(self.conds))]
+        self.refined_lps = [[] for _ in range(self.size)]
+        self._is_refined = [False for _ in range(self.size)]
 
 
     def read_udi(self, udi):
@@ -92,6 +94,8 @@ class datamodel():
                 self.data[ind]['cations'] = self.cations
 
         self.phases = ["" for _ in range(self.size)]
+        self.refined_lps = [[] for _ in range(self.size)]
+        self._is_refined = [False for _ in range(self.size)]       
         self.dwells = np.array([0 for _ in range(self.size)])
         self.tpeaks = np.array([0 for _ in range(self.size)])
         self.current_dwell = 0
@@ -103,9 +107,17 @@ class datamodel():
         self.ind = ind
 
 
-    def add_to_phase_diagram(self, phase_names):
-        self.phases[self._ind] = phase_names
+    def update_refined_lp(self, ind, refined_lp):
+        self.refined_lps[ind] = refined_lp
+        self._is_refined[ind] = True
 
+    def add_to_phase_diagram(self, phase_names):
+        if self.phases[self._ind] != phase_names:
+            self.phases[self._ind] = phase_names
+            self._is_refined[self._ind] = False 
+
+    def is_refined(self, phase_name):
+        return False # FIXME: check whether all indices with phase_name is refined
 
     def __getitem__(self, ind):
         if not ind in self.data: 
@@ -158,44 +170,44 @@ class datamodel():
         return tmp
 
     # FIXME: A lot of followings can be removed
-    @property
-    def labeled_dwells(self):
-        return self.dwells[self.labeled]
+    # @property
+    # def labeled_dwells(self):
+    #     return self.dwells[self.labeled]
 
 
-    @property
-    def labeled_tpeaks(self):
-        return self.tpeaks[self.labeled]
+    # @property
+    # def labeled_tpeaks(self):
+    #     return self.tpeaks[self.labeled]
 
 
-    @property
-    def labeled_x(self):
-        return self.x[self.labeled]
+    # @property
+    # def labeled_x(self):
+    #     return self.x[self.labeled]
 
 
-    @property
-    def labeled_y(self):
-        return self.y[self.labeled]
+    # @property
+    # def labeled_y(self):
+    #     return self.y[self.labeled]
 
 
-    @property
-    def unlabeled_dwells(self):
-        return self.dwells[np.logical_not(self.labeled)]
+    # @property
+    # def unlabeled_dwells(self):
+    #     return self.dwells[np.logical_not(self.labeled)]
 
 
-    @property
-    def unlabeled_tpeaks(self):
-        return self.tpeaks[np.logical_not(self.labeled)]
+    # @property
+    # def unlabeled_tpeaks(self):
+    #     return self.tpeaks[np.logical_not(self.labeled)]
 
 
-    @property
-    def unlabeled_x(self):
-        return self.x[np.logical_not(self.labeled)]
+    # @property
+    # def unlabeled_x(self):
+    #     return self.x[np.logical_not(self.labeled)]
 
 
-    @property
-    def unlabeled_y(self):
-        return self.y[np.logical_not(self.labeled)]
+    # @property
+    # def unlabeled_y(self):
+    #     return self.y[np.logical_not(self.labeled)]
 
 
     @property

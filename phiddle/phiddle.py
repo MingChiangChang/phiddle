@@ -270,7 +270,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                     for i, cation in enumerate(self.model.cations):
                         self.phase_diagram_list.comp_str[i] = cation
                     self.phase_diagram_list.update_combo_boxes()
-                    # self.lattice_param_list.update_phase_combo_box()
                 self.h5_path = load_meta_data["h5_path"]
                 self.labeler.read_csv(load_meta_data["csv_path"])
                 self.csv_path = load_meta_data["csv_path"]
@@ -333,12 +332,19 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.lattice_param_list.update_phase_combo_box(phase_names)
 
     def lp_phase_changed(self, phase):
+        print(phase)
         if phase == "":
             return
+
+        if self.model.is_refined(phase):
+            # check refined_lps to tell 
+            return 
+
         indicies = self.model.get_index_with_phase(phase)
         phase_ls = self.model.get_labeled_phases(indicies)
 
-        refined_result = []
+        refined_result_for_plot = []
+        refined_lp = []
         for i, phases in tqdm(zip(indicies, phase_ls)):
             data = self.model[i]
             left_width, right_width = left_right_width(self.model.tpeaks[i], self.model.dwells[i])
@@ -347,12 +353,17 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             q = data['q']
             res = self.labeler.fit_phases(q, y, phases)
             for cp in res.CPs:
+                refined_lp.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
                 if cp.name == phase:
-                    refined_result.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
+                    refined_result_for_plot.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
+
+            self.model.update_refined_lp(i, refined_lp)
+            
 
         tpeak = [self.model.tpeaks[i] for i in indicies]
         dwell = [self.model.dwells[i] for i in indicies]
-        self.lattice_param_view.plot(tpeak, dwell, np.array(refined_result))
+        print(refined_result_for_plot)
+        self.lattice_param_view.plot(tpeak, dwell, np.array(refined_result_for_plot))
 
             
 
