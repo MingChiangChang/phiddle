@@ -84,6 +84,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.phase_diagram_list.dim_change_signal.connect(self.phase_diagram_view.change_dim)
         self.phase_diagram_list.axes_signal.connect(self.phase_diagram_view.change_axes)
         self.lattice_param_list.phase_selection_box.currentTextChanged.connect(self.lp_phase_changed)
+        self.lattice_param_list.dim_change_signal.connect(self.lattice_param_view.change_dim)
+        self.lattice_param_list.axes_signal.connect(self.lattice_param_view.change_axes)
+
         self.popup.set_clicked.connect(self.update_labeler_hyperparams)
 
         label_button = QPushButton()
@@ -336,35 +339,38 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         if phase == "":
             return
 
-        if self.model.is_refined(phase):
-            # check refined_lps to tell 
-            return 
-
         indicies = self.model.get_index_with_phase(phase)
-        phase_ls = self.model.get_labeled_phases(indicies)
+        if self.model.is_refined(phase):
+            refined_result_for_plot = self.model.get_refined_lp_of_phase(phase) 
+        else:
+            phase_ls = self.model.get_labeled_phases(indicies)
 
-        refined_result_for_plot = []
-        refined_lp = []
-        for i, phases in tqdm(zip(indicies, phase_ls)):
-            data = self.model[i]
-            left_width, right_width = left_right_width(self.model.tpeaks[i], self.model.dwells[i])
-            center = get_center_asym(data['data'], left_width, right_width)
-            y, _, _ = minmax_norm(data['data'][:, center])
-            q = data['q']
-            res = self.labeler.fit_phases(q, y, phases)
-            for cp in res.CPs:
-                refined_lp.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
-                if cp.name == phase:
-                    refined_result_for_plot.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
+            refined_result_for_plot = []
+            refined_lp = []
+            for i, phases in tqdm(zip(indicies, phase_ls)):
+                data = self.model[i]
+                left_width, right_width = left_right_width(self.model.tpeaks[i], self.model.dwells[i])
+                center = get_center_asym(data['data'], left_width, right_width)
+                y, _, _ = minmax_norm(data['data'][:, center])
+                q = data['q']
+                res = self.labeler.fit_phases(q, y, phases)
+                for cp in res.CPs:
+                    refined_lp.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
+                    if cp.name == phase:
+                        refined_result_for_plot.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
 
-            self.model.update_refined_lp(i, refined_lp)
+                self.model.update_refined_lp(i, refined_lp)
             
-
-        tpeak = [self.model.tpeaks[i] for i in indicies]
-        dwell = [self.model.dwells[i] for i in indicies]
-        print(refined_result_for_plot)
-        self.lattice_param_view.plot(tpeak, dwell, np.array(refined_result_for_plot))
-
+        # FIXME: This should belong to model
+        lp_dict = {}
+        lp_dict["Tpeak"] = [self.model.tpeaks[i] for i in indicies]
+        lp_dict["Dwell"] = [self.model.dwells[i] for i in indicies]
+        cations = self.model.get_cations()
+        # if len(cations) > 0:
+        for j, cation in enumerate(cations):
+            lp_dict[cation] = [self.model.fractions[i][j] for i in indicies]
+        lp_dict["refined_lps"] = np.array(refined_result_for_plot)
+        self.lattice_param_view.plot(lp_dict, self.lattice_param_list.get_current_axes())
             
 
     def update_lp_plot(self, mask):

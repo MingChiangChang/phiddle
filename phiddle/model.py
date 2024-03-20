@@ -101,6 +101,11 @@ class datamodel():
         self.current_dwell = 0
         self.current_tpeak = 0
         self.conds = ["tau_0_T_0" for _ in range(self.size)]
+
+    def get_cations(self):
+        if hasattr(self, 'cations'):
+            return self.cations
+        return []
                     
 
     def update(self, ind):
@@ -117,7 +122,8 @@ class datamodel():
             self._is_refined[self._ind] = False 
 
     def is_refined(self, phase_name):
-        return False # FIXME: check whether all indices with phase_name is refined
+        indicies = self.get_index_with_phase(phase_name)
+        return np.all([self._is_refined[ind] for ind in indicies])
 
     def __getitem__(self, ind):
         if not ind in self.data: 
@@ -139,12 +145,14 @@ class datamodel():
                         phase_dict[phase]['Dwell'] = []
                         phase_dict[phase]['Tpeak'] = []
                         phase_dict[phase]['idx'] = []
+                        phase_dict[phase]['refined_lp'] = []
                         if hasattr(self, 'cations'):
                             for j, cation in enumerate(self.cations):
                                 phase_dict[phase][cation] = []
 
                     phase_dict[phase]['Dwell'].append(self.dwells[idx])
                     phase_dict[phase]['Tpeak'].append(self.tpeaks[idx])
+                    phase_dict[phase]['refined_lp'].append(self.refined_lps[idx])
                     phase_dict[phase]['idx'].append(idx)
                     if hasattr(self, 'cations'):
                         for j, cation in enumerate(self.cations):
@@ -158,6 +166,19 @@ class datamodel():
     def get_labeled_phases(self, idx):
         return [self.phases[i] for i in idx]
 
+    def get_refined_lp_of_phase(self, phase_name):
+        indices = self.get_index_with_phase(phase_name)
+        phases_ls = self.get_labeled_phases(indices)
+        refined_lp = []
+
+        for i, phases in zip(indices, phases_ls):
+            for j, phase in enumerate(phases):
+                if phase_name == phase:
+                    refined_lp.append(self.refined_lps[i][j])
+
+        return refined_lp
+
+
     @property
     def labeled(self):
         return [bool(phase) for phase in self.phases]
@@ -169,51 +190,9 @@ class datamodel():
         tmp = tmp.astype(bool)
         return tmp
 
-    # FIXME: A lot of followings can be removed
-    # @property
-    # def labeled_dwells(self):
-    #     return self.dwells[self.labeled]
-
-
-    # @property
-    # def labeled_tpeaks(self):
-    #     return self.tpeaks[self.labeled]
-
-
-    # @property
-    # def labeled_x(self):
-    #     return self.x[self.labeled]
-
-
-    # @property
-    # def labeled_y(self):
-    #     return self.y[self.labeled]
-
-
-    # @property
-    # def unlabeled_dwells(self):
-    #     return self.dwells[np.logical_not(self.labeled)]
-
-
-    # @property
-    # def unlabeled_tpeaks(self):
-    #     return self.tpeaks[np.logical_not(self.labeled)]
-
-
-    # @property
-    # def unlabeled_x(self):
-    #     return self.x[np.logical_not(self.labeled)]
-
-
-    # @property
-    # def unlabeled_y(self):
-    #     return self.y[np.logical_not(self.labeled)]
-
-
     @property
     def current_data(self):
         return self.__getitem__(self.ind)
-
 
     @property
     def current_xx(self):
