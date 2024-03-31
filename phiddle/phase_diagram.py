@@ -13,7 +13,7 @@ import matplotlib.ticker as mticker
 
 from util import COLORS
 
-
+# FIXME: Always read phases before plotting
 class PhaseDiagramView(FigureCanvasQTAgg):
 
     def __init__(self, parent=None, xlim=(250, 10000), ylim=(400, 1400)):

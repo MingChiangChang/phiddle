@@ -15,15 +15,9 @@ from util import minmax_norm
 class labeler():
 
     def __init__(self):
-        pass
-
-        # with open(cifs, 'r') as f:
-        #    t = f.read()
-        # self.phases = create_phases(t, .2, FixedPseudoVoigt(0.1))
-
-        self.std_noise = 0.05
+        self.std_noise = .05
         self.mean_θ = [1., .5, .1]
-        self.std_θ = [0.001, 0.5, 0.05]
+        self.std_θ = [.05, .5, .1]
 
         self.max_phase = 1
         self.expand_k = 2
@@ -70,11 +64,18 @@ class labeler():
         if self.background_option == "None":
             self.use_background = False
 
+        if self.optimize_mode == "With Uncertainty":
+            print("Uncertainty return is not availble for tree seach labeling .. yet.")
+            print("Defaulting to Simple optimization")
+            optimize_mode = "Simple"
+        else:
+            optimize_mode = self.optimize_mode
+
         result = search_b(tree, q, data,
                      self.max_phase, self.expand_k, False,
                      self.use_background, self.background_length,
                      self.std_noise, self.mean_θ, self.std_θ,
-                     optimize_mode=self.get_optimize_enum(self.optimize_mode),
+                     optimize_mode=self.get_optimize_enum(optimize_mode),
                      em_loop_num=5,
                      maxiter=self.max_iter,
                      regularization=True)
@@ -112,8 +113,6 @@ class labeler():
 
         self.has_labeled = True
         self.label_ind = 0
-        # return results[:5], bg # bg is only nonzero when constant background
-        # is used (MCBL0
 
     def fit_phases(self, q, d, phase_names):
         self.q = q
@@ -131,23 +130,40 @@ class labeler():
             bg = BackgroundModel(q, EQ(), 8., 10.)
         else:
             bg = None
-        # data -= np.min(data)
-        # self.bg -= _min
-        # self.bg /= _max
-        # norm = np.max(data)
-        # data /= norm
-
+        
         pm = PhaseModel(phases, None, bg)
         result = optimize_b(pm, q, data,
                                 self.std_noise, self.mean_θ, self.std_θ,
                                 optimize_mode=self.get_optimize_enum(self.optimize_mode),
                                 maxiter=self.max_iter)
+
+        if self.optimize_mode == "With Uncertainty":
+            result, var = result
+            all_params = np.ravel(np.array([CS.get_eight_params(cp) for cp in result.CPs]))
+            if np.all(var >= 0):
+                log_uncer = np.sqrt(var)
+                uncer = np.maximum(np.abs(np.exp(np.log(all_params + log_uncer)) - all_params),
+                                   np.abs(np.exp(np.log(all_params + log_uncer)) - all_params))
+            else:
+                print("CAUTION: There is negative hessian value, meaning the optimization is not successsful.")
+                print("         The uncertainty is default to 50% of the parameters")
+                uncer = np.array([ 0.5*param if v != 0 else 0 for v, param in zip(var, all_params) ])
+        else:
+            uncer = np.zeros(8*len(result.CPs))
+            
+
         fractions = get_fraction(result.CPs)
+        n_param = 0
 
         print("############## Output ################")
         print("")
         print("Refinement result:")
-        print(result.CPs)
+        for i, cp in enumerate(result.CPs): 
+            if self.optimize_mode == "With Uncertainty": 
+                self.print_refined_result_w_uncer(cp, uncer[i*8:(i+1)*8])
+            else:
+                self.print_refined_result(cp)
+
         print("")
         print("Fractions:")
         for i, xi in enumerate(fractions):
@@ -161,7 +177,7 @@ class labeler():
         self.t = [1.0]
         if self.background_option in ["None", "Default"]:
             self.bg = np.zeros(q.shape)
-        return result 
+        return result, uncer 
 
     @property
     def residual(self):
@@ -275,3 +291,32 @@ class labeler():
             return CS.Simple
         if optimize_mode_str == "EM":
             return CS.EM
+        if optimize_mode_str == "With Uncertainty":
+            return CS.WithUncer
+
+    def print_refined_result(self, CP):
+        a_strain, b_strain, c_strain, α_strain, β_strain, γ_strain = CS.get_strain(CP)
+        print(f"Phase name: {CP.name}, ID: {CP.id}")
+        print(f"Optimization parameters:")
+        print(f"Activation: {CP.act}, Peak width: {CP.σ}")
+        print(f"Normalization: {CP.norm_constant}")
+        print(f"Lattice information:")
+        print(f"a: {CP.cl.a:.6f}, b: {CP.cl.b:.6f}, c: {CP.cl.c:.6f}")
+        print(f"α: {CP.cl.α/np.pi*180:.2f}, β: {CP.cl.β/np.pi*180:2f}, γ: {CP.cl.γ/np.pi*180:.2f}")
+        print(f"Strain: a:{a_strain:.4f}, b:{b_strain:.4f}, c:{c_strain:.4f}, α:{α_strain:.4f}, β:{β_strain:.4f}, γ:{γ_strain:.4f}")
+        print("")
+
+
+    def print_refined_result_w_uncer(self, CP, uncer):
+        a_strain, b_strain, c_strain, α_strain, β_strain, γ_strain = CS.get_strain(CP)
+        print(f"Phase name: {CP.name}, ID: {CP.id}")
+        print(f"Optimization parameters:")
+        print(f"Activation: {CP.act:.4f}±{uncer[6]:.4f}, Peak width: {CP.σ:.4f}±{uncer[7]:.4f}")
+        print(f"Normalization: {CP.norm_constant}")
+        print(f"Lattice information:")
+        print(f"a: {CP.cl.a:.6f}±{uncer[0]:.6f}, b: {CP.cl.b:.6f}±{uncer[1]:.6f}, c: {CP.cl.c:.6f}±{uncer[2]:.6f}")
+        print(f"α: {CP.cl.α/np.pi*180:.2f}±{uncer[3]/np.pi*180:.2f}, β: {CP.cl.β/np.pi*180:.2f}±{uncer[4]/np.pi*180:.2f}, γ: {CP.cl.γ/np.pi*180:.2f}±{uncer[5]/np.pi*180:.2f}")
+        print(f"Strain: a:{a_strain:.4f}, b:{b_strain:.4f}, c:{c_strain:.4f}, α:{α_strain:.4f}, β:{β_strain:.4f}, γ:{γ_strain:.4f}")
+        print("")
+
+

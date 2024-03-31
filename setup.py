@@ -9,5 +9,5 @@ setup(
     python_requires='>=3.6.0',
     url='http://github.com/mingchianghchang/phiddle',
     packages=find_packages(),
-    install_requires=['numpy', 'matplotlib', 'julia', 'pyqt6', 'pymatgen', 'xrayutilities']
+    install_requires=['numpy', 'matplotlib', 'julia', 'pyqt6', 'pymatgen', 'xrayutilities', 'astropy']
 )

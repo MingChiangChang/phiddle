@@ -14,29 +14,21 @@ def two_lorentz(height, x_0, sigma_1, sigma_2):
 
 
 def collect_data_and_q(h5, conds):
-
-    data_dict = {}
+    q = []
+    data = []
 
     for cond in conds:
-        cond_dict = {}
-        q = h5[cond]['0']['integrated_1d'][0]
+        q.append(h5[cond]['0']['integrated_1d'][0])
+
         dim2 = len(h5[cond])
         dim1 = len(h5[cond]['0']['integrated_1d'][0])
 
         arr = np.zeros((dim1, dim2))
         for i in range(dim2):
             arr[:, i] = h5[cond][str(i)]['integrated_1d'][1]
-        cond_dict['q'] = q
-        cond_dict['data'] = arr
-        cond_dict['cond'] = cond
-        cond_dict['x'] = h5[cond].attrs['x_center']
-        cond_dict['y'] = h5[cond].attrs['y_center']
-        if 'fracs' in list(h5[cond].attrs):
-            cond_dict['fracs'] = h5[cond].attrs['fracs']
-            cond_dict['cations'] = h5[cond].attrs['cations']
-        data_dict[cond] = cond_dict
+        data.append(arr)
 
-    return data_dict
+    return data, q 
 
 
 def collect_conditions(conds):
@@ -93,3 +85,7 @@ def find_first_smaller(arr, value):
     for idx, val in enumerate(arr[::-1]):
         if val < value:
             return arr.shape[0] - idx
+
+
+def remove_back_slash(s):
+    return s.replace('/' , '')

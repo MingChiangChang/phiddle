@@ -8,7 +8,7 @@ import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtWidgets import (
     QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
-    QHBoxLayout, QLineEdit, QLabel, QFileDialog, QMenu
+    QHBoxLayout, QLineEdit, QLabel, QFileDialog, QMenu, QMessageBox
 )
 from matplotlib.backends.backend_qtagg import (
     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
@@ -17,7 +17,7 @@ import h5py
 from tqdm import tqdm
 
 
-from util import index_phase, minmax_norm
+from util import index_phase, minmax_norm, remove_back_slash
 from model import datamodel
 from stripeview import stripeview
 from globalview import globalview
@@ -30,11 +30,12 @@ from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
 from temp_profile import LaserPowerMing_Spring2024, left_right_width
 
+
 class TopLevelWindow(QtWidgets.QMainWindow):
 
     def __init__(self,
-                 h5_path=None,  # "data/AL_23F4_Bi-Ti-O_run_01_0_all_1d.h5",
-                 csv_path=None):  # "/Users/ming/Desktop/Code/SARA.jl/BiTiO/cifs/sticks.csv" ):
+                 h5_path=None,
+                 csv_path=None):
         super().__init__()
         self._createMenuBar()
         self.logger = logging.getLogger(__name__)
@@ -68,14 +69,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.lattice_param_view = LatticeParamView()
         self.lattice_param_list = LatticeParamList()
-        # self.lattice_param_list.save_signal.connect(
-        #     self.phase_diagram_view.save_phase_diagram)
+        self.lattice_param_list.save_signal.connect(self.save_lp_diagram)
+        self.lattice_param_list.save_lp_signal.connect(self.save_lp)
         lp_layout = QHBoxLayout()
         lp_layout.addWidget(self.lattice_param_view)
         lp_layout.addWidget(self.lattice_param_list)
         lp_layout.setStretch(0, 3)
         lp_layout.setStretch(1, 1)
-
 
         self.globalview.picked.connect(self.update)
         self.cifview.checked.connect(self.update_sticks)
@@ -210,10 +210,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.model.read_h5(self.h5_path)
             if hasattr(self.model, "cations"):
                 self.phase_diagram_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
+                self.lattice_param_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
                 for i, cation in enumerate(self.model.cations):
                     self.phase_diagram_list.comp_str[i] = cation
+                    self.lattice_param_list.comp_str[i] = cation
                 self.phase_diagram_list.update_combo_boxes()
-                self.lattice_param_list.update_phase_combo_box()
+                self.lattice_param_list.update_axis_combo_boxes()
             self.ind = 0
             # self.update(self.ind)
         elif self.h5_path.endswith("udi"):
@@ -251,9 +253,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         if self.save_fn:
             storing_ds = {}
             storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
-            storing_ds["phases"] = self.model.phases
+            all_phases = self.model.get_all_phases()
+            for phase in all_phases:
+                storing_ds[phase] = self.model.get_dict_for_lp_plot(phase) # FIXME: Load this as well
+            storing_ds["phases"] = self.model.get_phases()
             storing_ds["csv_path"] = os.path.abspath(self.csv_path)
             storing_ds["h5_path"] = os.path.abspath(self.h5_path)
+            print(storing_ds)
             with open(self.save_fn, 'w') as f:
                 json.dump(storing_ds, f)
 
@@ -270,15 +276,18 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 self.model.read_h5(load_meta_data["h5_path"])
                 if hasattr(self.model, "cations"):
                     self.phase_diagram_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
+                    self.lattice_param_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
                     for i, cation in enumerate(self.model.cations):
                         self.phase_diagram_list.comp_str[i] = cation
+                        self.lattice_param_list.comp_str[i] = cation
                     self.phase_diagram_list.update_combo_boxes()
+                    self.lattice_param_list.update_axis_combo_boxes()
                 self.h5_path = load_meta_data["h5_path"]
                 self.labeler.read_csv(load_meta_data["csv_path"])
                 self.csv_path = load_meta_data["csv_path"]
                 self.cifview.update_cif_list(
                     [phase.name for phase in self.labeler.phases])
-                self.model.phases = load_meta_data["phases"]
+                self.model.update_phases(load_meta_data["phases"])
                 self.ind = 0
             else:
                 self.logger.error(
@@ -320,6 +329,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def update_pd_plot(self, mask):
         phase_dict = self.model.get_dict_for_phase_diagram()
+        # FIXME: Bug after changing h5s
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
                                      mask)
@@ -335,7 +345,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.lattice_param_list.update_phase_combo_box(phase_names)
 
     def lp_phase_changed(self, phase):
-        print(phase)
         if phase == "":
             return
 
@@ -346,32 +355,50 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             phase_ls = self.model.get_labeled_phases(indicies)
 
             refined_result_for_plot = []
-            refined_lp = []
-            for i, phases in tqdm(zip(indicies, phase_ls)):
-                data = self.model[i]
-                left_width, right_width = left_right_width(self.model.tpeaks[i], self.model.dwells[i])
+            for ind, phases in tqdm(zip(indicies, phase_ls)):
+                data_dict = self.model.get_lps_update_dict()
+                data = self.model[ind]
+                left_width, right_width = left_right_width(self.model.df['Tpeak'][ind],
+                                                           self.model.df['Dwell'][ind])
                 center = get_center_asym(data['data'], left_width, right_width)
                 y, _, _ = minmax_norm(data['data'][:, center])
                 q = data['q']
-                res = self.labeler.fit_phases(q, y, phases)
-                for cp in res.CPs:
-                    refined_lp.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
-                    if cp.name == phase:
-                        refined_result_for_plot.append([cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ])
 
-                self.model.update_refined_lp(i, refined_lp)
+                res, uncer = self.labeler.fit_phases(q, y, phases)
+                for j, cp in enumerate(res.CPs):
+                    data_dict['refined_lps'].append(
+                            [cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ]
+                            )
+                    data_dict['refined_lps_uncer'].append(uncer[j*8:j*8+6].tolist())
+                    data_dict['act'].append(cp.act)
+                    data_dict['act_uncer'].append(uncer[j*8+6])
+                    data_dict['width'].append(cp.σ)
+                    data_dict['width_uncer'].append(uncer[j*8+7])
+                    if cp.name == phase:
+                        refined_result_for_plot.append(
+                             [cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ]
+                             )
+                
+                self.model.update_ind(ind, data_dict)
             
-        # FIXME: This should belong to model
-        lp_dict = {}
-        lp_dict["Tpeak"] = [self.model.tpeaks[i] for i in indicies]
-        lp_dict["Dwell"] = [self.model.dwells[i] for i in indicies]
-        cations = self.model.get_cations()
-        # if len(cations) > 0:
-        for j, cation in enumerate(cations):
-            lp_dict[cation] = [self.model.fractions[i][j] for i in indicies]
-        lp_dict["refined_lps"] = np.array(refined_result_for_plot)
+        lp_dict = self.model.get_dict_for_lp_plot(phase)
+        lp_dict['refined_lps'] = np.array(refined_result_for_plot)
         self.lattice_param_view.plot(lp_dict, self.lattice_param_list.get_current_axes())
             
+    def save_lp_diagram(self):
+        fn, _ = QFileDialog.getSaveFileName(
+            self, 'Save Lattice Parameter Diagram', "", "")
+        self.lattice_param_view.save_digram(fn)
+
+
+
+    def save_lp(self, phase_name):
+        print(phase_name)
+        fn, _ = QFileDialog.getSaveFileName(
+            self, 'Save Lattice Parameter', remove_back_slash(phase_name), "")
+        self.model.save_lp(fn, phase_name)
+
+
 
     def update_lp_plot(self, mask):
         phase_dict = self.model.get_dict_for_phase_diagram()
@@ -439,29 +466,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def add_to_phase_diagram(self, isChecked_list):
         phase_names = self.labeler.get_phase_names(isChecked_list)
         self.model.add_to_phase_diagram(phase_names)
-        # self.update(self.ind)
 
-    def update_labeler_hyperparams(
-            self,
-            std_noise,
-            mean,
-            std,
-            max_phase,
-            expand_degree,
-            background_length,
-            max_iter,
-            optimize_mode,
-            background_option):
+    def update_labeler_hyperparams(self, std_noise, mean, std, max_phase,
+            expand_degree, background_length, max_iter, optimize_mode, background_option):
         self.labeler.set_hyperparams(
-            std_noise,
-            mean,
-            std,
-            max_phase,
-            expand_degree,
-            background_length,
-            max_iter,
-            optimize_mode,
-            background_option)
+            std_noise, mean, std, max_phase, expand_degree, background_length,
+            max_iter, optimize_mode, background_option)
+
 
     def next_label_result(self):
         if self.labeler.has_labeled:
@@ -518,22 +529,36 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.model.current_xx)
         self.globalview.clear_figures()
         self.globalview.plot(
-            self.model.dwells,
-            self.model.tpeaks,
-            self.model.x,
-            self.model.y,
+            self.model.df['Dwell'],
+            self.model.df['Tpeak'],
+            self.model.df['x'],
+            self.model.df['y'],
             self.model.labeled,
             self.model.current,
             )
         try:
             existing_phase_ind = index_phase(
-                self.model.phases[new_ind], self.labeler.phase_names)
+                self.model.df['phases'][new_ind], self.labeler.phase_names)
 
             if existing_phase_ind:
                 self.cifview.clear()
                 self.cifview.check_boxes(existing_phase_ind)
         except AttributeError:
             pass
+
+    def closeEvent(self, event):
+        # Ask for confirmation before closing
+        confirmation = QMessageBox.question(self, "Confirmation",
+              "Do you want to save current progress before closing?",
+              QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
+
+        if confirmation == QMessageBox.StandardButton.No:
+            event.accept()  # Close the app
+        elif confirmation == QMessageBox.StandardButton.Yes:
+            self.save_progress_clicked()
+            event.accept()
+        else:
+            event.ignore()  #
 
 
 if __name__ == "__main__":

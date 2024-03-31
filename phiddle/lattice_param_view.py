@@ -15,7 +15,6 @@ import mpl_toolkits
 
 from util import COLORS
 
-
 class LatticeParamView(FigureCanvasQTAgg):
 
     def __init__(self, parent=None, xlim=(250, 10000), ylim=(400, 1400)):
@@ -28,6 +27,7 @@ class LatticeParamView(FigureCanvasQTAgg):
         self.xlabel = "Dwell (μs)"
         self.ylabel = "Tpeak ($^o$C)"
         self.zlabel = None
+        self.font_size = 6
         self.xlim = xlim
         self.ylim = ylim
 
@@ -65,6 +65,7 @@ class LatticeParamView(FigureCanvasQTAgg):
                     cbar = self.fig.colorbar(im, cax=cax, ticklocation='top') 
                 else:
                     cbar = self.fig.colorbar(im, cax=cax)
+                cbar.ax.tick_params(labelsize=self.font_size)
                 self.cbars.append(cbar)
 
 
@@ -89,7 +90,7 @@ class LatticeParamView(FigureCanvasQTAgg):
         self.b_plot.set_yticks([])
         self.c_plot.set_yticks([])
         self.β_plot.set_yticks([])
-        self.c_plot.set_yticks([])
+        self.γ_plot.set_yticks([])
 
 
     def clear_figures(self):
@@ -112,134 +113,32 @@ class LatticeParamView(FigureCanvasQTAgg):
     def plot(self, lp_dict, axes = ["Dwell", "Tpeak"]):
         self.lp_dict = lp_dict
         self.clear_figures()
-        if self.dim == 2:
-            self._init_figures()
-            for i, plot in enumerate(self.plots):
-                if i > 2: 
-                    c = lp_dict["refined_lps"][:, i]/np.pi*180
-                    im = plot.scatter(lp_dict[axes[0]], lp_dict[axes[1]], c=c)
-                else:
-                    c = lp_dict["refined_lps"][:, i]
-                    im = plot.scatter(lp_dict[axes[0]], lp_dict[axes[1]], c=c)
-                            # plt.colorbar()
-                im.set_clim(0.98*np.mean(c), 1.01*np.mean(c))
-                im.colorbar = self.cbars[i]
-                im.colorbar_cid = im.callbacks.connect('changed', self.cbars[i].update_normal)
-                self.cbars[i].update_normal(im)
-                plot.set_xscale("log")
-                plot.set_xlim(self.xlim)
-                plot.set_ylim(self.ylim)
+        # if self.dim == 2:
+        self._init_figures()
+        xlim, self.xlabel, xscale = self.get_2d_axis_info(axes[0])
+        ylim, self.ylabel, yscale = self.get_2d_axis_info(axes[1])
 
-        elif self.dim == 3:
-            self._init_figures(projection='3d')
+        for i, plot in enumerate(self.plots):
+            if i > 2: 
+                c = lp_dict["refined_lps"][:, i]/np.pi*180
+                im = plot.scatter(lp_dict[axes[0]], lp_dict[axes[1]], c=c)
+            else:
+                c = lp_dict["refined_lps"][:, i]
+                im = plot.scatter(lp_dict[axes[0]], lp_dict[axes[1]], c=c)
+            im.set_clim(np.mean(c)-2*np.std(c), np.mean(c)+2*np.std(c))
+            im.colorbar = self.cbars[i]
+            im.colorbar_cid = im.callbacks.connect('changed', self.cbars[i].update_normal) # So that the removal does not give errors
+            self.cbars[i].update_normal(im)
 
-        
+            plot.set_xscale(xscale)
+            plot.set_xlim(xlim)
+            plot.set_yscale(yscale)
+            plot.set_ylim(ylim)
+        self._set_labels()
+        self._set_ticks()
+
         self.draw()
 
-
-    # def plot(self, lattice_param_dict, axes = ["Dwell", "Tpeak"] , mask=None):
-
-    #     self.phase_dict = phase_dict
-    #     phase_name_ls = np.array(list(phase_dict))
-    #     if mask:
-    #         others = phase_name_ls[np.logical_not(mask)]
-    #         phase_name_ls = phase_name_ls[mask]
-
-    #     
-    #     if self.dim == 2:
-    #         if self.fig.axes:
-    #             self.fig.gca().remove()
-    #         self.phase_diagram = self.fig.add_subplot()
-
-    #         xlim, xlabel, xscale = self.get_2d_axis_info(axes[0])
-    #         ylim, ylabel, yscale = self.get_2d_axis_info(axes[1])
-
-    #         # self.phase_diagram.clear()
-    #         for idx, phase in enumerate(phase_name_ls):
-    #             self.phase_diagram.scatter(phase_dict[phase][axes[0]],
-    #                                        phase_dict[phase][axes[1]],
-    #                                        label=phase,
-    #                                        color=COLORS[((idx+1) % len(COLORS)-1)],
-    #                                        alpha=0.5)
-    #         if mask:
-    #             for idx, phase in enumerate(others):
-    #                 self.phase_diagram.scatter(phase_dict[phase][axes[0]],
-    #                                            phase_dict[phase][axes[1]],
-    #                                            label="Other" if idx==0 else "_other",
-    #                                            color="#DFDFDF", #'k', #COLORS[((idx+1) % len(COLORS)-1)],
-    #                                            alpha=1.)
-
-
-    #         self.phase_diagram.set_xlim(xlim)
-    #         self.phase_diagram.set_xlabel(xlabel)
-    #         self.phase_diagram.set_xscale(xscale)
-    #         self.phase_diagram.set_ylim(ylim)
-    #         self.phase_diagram.set_ylabel(ylabel)
-    #         self.phase_diagram.set_yscale(yscale)
-
-    #         self.phase_diagram.legend(bbox_to_anchor=(1., 1.))
-
-    #     elif self.dim == 3:
-    #         if self.fig.axes:
-    #             self.fig.gca().remove()
-    #             cids = sorted(list(self.callbacks._pickled_cids))
-    #             if len(cids) > 8: # There are 8 default callbacks for some reason
-    #                for i in range(3):
-    #                    # Remove the callbacks that were connected to previous axes
-    #                    self.callbacks.disconnect(cids[-i-1])
-
-    #         self.phase_diagram = self.fig.add_subplot(projection='3d')
-
-    #         xlim, xlabel, xscale = self.get_3d_axis_info(axes[0])
-    #         ylim, ylabel, yscale = self.get_3d_axis_info(axes[1])
-    #         zlim, zlabel, zscale = self.get_3d_axis_info(axes[2]) # there's inconsistnecy here
-    #         scales = [xscale, yscale, zscale]
-
-    #         transform = []
-    #         for scale in scales:
-    #             if scale == "log":
-    #                 transform.append(np.log10)
-    #             else:
-    #                 transform.append(self.identity)
-
-
-    #         for idx, phase in enumerate(phase_name_ls):
-    #             self.phase_diagram.scatter(transform[0](phase_dict[phase][axes[0]]),
-    #                                        transform[1](phase_dict[phase][axes[1]]),
-    #                                        zs = transform[2](phase_dict[phase][axes[2]]),
-    #                                        label=phase,
-    #                                        color=COLORS[((idx+1) % len(COLORS)-1)],
-    #                                        s=50,
-    #                                        alpha=0.5)
-    #         if mask:
-    #             for idx, phase in enumerate(others):
-    #                 self.phase_diagram.scatter(transform[0](phase_dict[phase][axes[0]]),
-    #                                            transform[1](phase_dict[phase][axes[1]]),
-    #                                            zs = transform[2](phase_dict[phase][axes[2]]),
-    #                                            label="Other" if idx==0 else "_other",
-    #                                            s=50,
-    #                                            color="#DFDFDF",#'k', #COLORS[((idx+1) % len(COLORS)-1)],
-    #                                            alpha=1.)
-
-
-    #         self.phase_diagram.set_xlim(xlim)
-    #         self.phase_diagram.set_xlabel(xlabel)
-    #         self.phase_diagram.set_ylim(ylim)
-    #         self.phase_diagram.set_ylabel(ylabel)
-    #         self.phase_diagram.set_zlim(zlim)
-    #         self.phase_diagram.set_zlabel(zlabel)
-
-    #         if 'log' in scales:
-    #             self.format_log_tick(self.get_log_axis(scales))
-    #         self.phase_diagram.legend()
-    #     self.draw()
-
-    # def format_log_tick(self, axis):
-    #     axis.set_major_formatter(mticker.FuncFormatter(self.log_tick_formatter))
-    #     axis.set_major_locator(mticker.FixedLocator(
-    #         np.linspace(np.log10(250), np.log10(10000), 10)
-    #         )
-    #      )
 
     def get_log_axis(self, plots, scales):
         idx = scales.index('log')
@@ -266,6 +165,10 @@ class LatticeParamView(FigureCanvasQTAgg):
             lim = (250, 10000)
             label = f"Dwell (us)"
             scale = "log"
+        elif axis =="x" or axis =="y":
+            lim = (-48, 48)
+            label = (axis + 'mm')
+            scale = 'linear'
         else:
             lim = (0, 1)
             label = f"{axis} (%)"
@@ -290,9 +193,9 @@ class LatticeParamView(FigureCanvasQTAgg):
 
 
 
-    # def save_phase_diagram(self):
-    #     fn, _ = QFileDialog.getSaveFileName(self, 'Save Phase Diagram', "", "")
-    #     self.phase_diagram.figure.savefig(fn)
+    def save_phase_diagram(self):
+        fn, _ = QFileDialog.getSaveFileName(self, 'Save Phase Diagram', "", "")
+        self.phase_diagram.figure.savefig(fn)
 
 
     def change_dim(self, value, axes):
@@ -309,6 +212,7 @@ class LatticeParamList(QWidget):
 
     checked_signal = pyqtSignal(list)
     save_signal = pyqtSignal()
+    save_lp_signal = pyqtSignal(str)
     axes_signal = pyqtSignal(list)
     dim_change_signal = pyqtSignal(int, list)
 
@@ -320,8 +224,13 @@ class LatticeParamList(QWidget):
         super(LatticeParamList, self).__init__(parent)
 
         self.save_button = QPushButton()
-        self.save_button.setText("Save Phase Diagram")
+        self.save_button.setText("Save Diagram")
         self.save_button.clicked.connect(lambda: self.save_signal.emit())
+        self.save_lp_button = QPushButton()
+        self.save_lp_button.setText("Save Lattice Parameters")
+        self.save_lp_button.clicked.connect(
+                lambda: self.save_lp_signal.emit(self.phase_selection_box.currentText())
+        )
 
         self.dim_selection_box = QComboBox()
         self.dim_selection_box.addItems(["2D phase digrams", "3D phase diagrams"])
@@ -333,7 +242,6 @@ class LatticeParamList(QWidget):
         self.comp3_str = "Composition 3"
         self.comp_str = [self.comp1_str, self.comp2_str, self.comp3_str]
         self.composition_dim = composition_dim
-        # self.option_ls = []
 
         self.widget_ls = []
 
@@ -381,6 +289,7 @@ class LatticeParamList(QWidget):
 
         self.outer_layout.addLayout(self.layout)
         self.outer_layout.addWidget(self.save_button)
+        self.outer_layout.addWidget(self.save_lp_button)
         self.setLayout(self.outer_layout)
 
 
@@ -461,7 +370,7 @@ class LatticeParamList(QWidget):
 
 
     def get_option_ls(self):
-        ls = ["Dwell", "Tpeak"]
+        ls = ["Dwell", "Tpeak", "x", "y"]
         i = 0
         while i < self.composition_dim:
             ls.append(self.comp_str[i])

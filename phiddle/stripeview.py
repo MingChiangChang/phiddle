@@ -275,10 +275,10 @@ class stripeview(FigureCanvasQTAgg):
         self.clear_figures()
         self.q = data['q']
         self.data = data['data']
-        self.cond = data['cond']
+        # self.cond = data['cond']
         self.fit_result = None
         self.xx = xx
-        self.tpeak, self.dwell = self.get_tpeak_dwell_from_cond(self.cond)
+        self.tpeak, self.dwell = data['Tpeak'], data['Dwell'] # self.get_tpeak_dwell_from_cond(self.cond)
         self.t_left = self.tpeak
         self.temp_topY = self.tpeak
         self.left_width, self.right_width = left_right_width(self.dwell, self.tpeak)

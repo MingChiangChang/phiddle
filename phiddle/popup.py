@@ -54,7 +54,7 @@ class Popup(QWidget):
         self.optimize_mode_prompt = QLabel()
         self.optimize_mode_prompt.setText("Optimize Mode")
         self.optimize_mode_dropdown = QComboBox()
-        self.optimize_mode_options = ["Simple", "EM"]
+        self.optimize_mode_options = ["Simple", "EM", "With Uncertainty"]
         self.optimize_mode_dropdown.addItems(self.optimize_mode_options)
 
         self.background_option_prompt = QLabel()
