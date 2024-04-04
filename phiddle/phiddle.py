@@ -7,13 +7,11 @@ import logging
 import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
-    QHBoxLayout, QLineEdit, QLabel, QFileDialog, QMenu, QMessageBox
+    QVBoxLayout, QWidget, QPushButton, QTabWidget, 
+    QHBoxLayout, QFileDialog, QMenu, QMessageBox
 )
 from matplotlib.backends.backend_qtagg import (
     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
-from matplotlib.figure import Figure
-import h5py
 from tqdm import tqdm
 
 
@@ -28,7 +26,7 @@ from lattice_param_view import LatticeParamView, LatticeParamList
 from popup import Popup
 from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
-from temp_profile import LaserPowerMing_Spring2024, left_right_width
+from temp_profile import left_right_width
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
@@ -259,7 +257,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             storing_ds["phases"] = self.model.get_phases()
             storing_ds["csv_path"] = os.path.abspath(self.csv_path)
             storing_ds["h5_path"] = os.path.abspath(self.h5_path)
-            print(storing_ds)
             with open(self.save_fn, 'w') as f:
                 json.dump(storing_ds, f)
 
@@ -393,7 +390,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def save_lp(self, phase_name):
-        print(phase_name)
         fn, _ = QFileDialog.getSaveFileName(
             self, 'Save Lattice Parameter', remove_back_slash(phase_name), "")
         self.model.save_lp(fn, phase_name)

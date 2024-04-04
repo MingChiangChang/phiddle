@@ -1,12 +1,9 @@
-import numpy as np
-from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
-    QCheckBox
+    QVBoxLayout, QWidget, QPushButton, QCheckBox
 )
-from matplotlib.backends.backend_qtagg import (
-    FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
+# from matplotlib.backends.backend_qtagg import (
+#     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
 from matplotlib.figure import Figure
 
 

@@ -200,7 +200,6 @@ class datamodel():
 
     def save_lp(self, filename, phase):
         lp_dict = self.get_dict_for_lp_plot(phase)
-        print(lp_dict)
 
         with open(filename, 'w') as f:
             json.dump(lp_dict, f)
@@ -247,8 +246,8 @@ class datamodel():
 
     @property
     def current_xx(self):
-        if hasattr(self, 'xx'):
-            return self.xx[self.ind]
+        if 'xx' in self.df:
+            return self.df['xx'][self.ind]
         return None
 
 

@@ -68,7 +68,6 @@ class globalview(FigureCanvasQTAgg):
         dwell_size -= np.min(dwell_size)
         dwell_size /= np.max(dwell_size)
 
-        print(np.min(tpeaks), np.max(tpeaks))
         self.location_artist = self.wafer_map.scatter(
             x, y, c=tpeaks, s=8, picker=True, alpha=0.)
         im = self.wafer_map.scatter(x[labeled], y[labeled], 
