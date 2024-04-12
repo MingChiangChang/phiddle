@@ -289,7 +289,7 @@ class stripeview(FigureCanvasQTAgg):
             self.fracs = data['fracs']
             self.cations = data['cations']
             for cation, frac in zip(self.cations, self.fracs):
-                self.comp_title += f" {cation}:{frac[0]:.3f}"
+                self.comp_title += f" {cation}:{frac:.3f}"
 
         self.avg_q = deepcopy(self.q)
 

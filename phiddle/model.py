@@ -1,4 +1,4 @@
-import re
+import os
 import json
 
 import numpy as np
@@ -39,11 +39,10 @@ class datamodel():
     def read_h5(self, file_path, q_path=None):
         self.df_data = {}
         self.h5_path = file_path  # keep for now, may be redundent
-        try:
-            self.h5 = h5py.File(file_path, 'r')['exp']
-        except FileNotFoundError:
+        if not os.path.isfile(file_path):
             print("h5 path not found")
             return
+        self.h5 = h5py.File(file_path, 'r')['exp']
 
         self._ind = 0 # State holder.. Should model has state..?
         self.conds = sorted(list(self.h5))
@@ -56,12 +55,15 @@ class datamodel():
         if 'fracs' in list(self.h5[self.conds[0]].attrs):
             self.cations = self.h5[self.conds[0]].attrs['cations']
 
+            fracs = []
             for i, cation in enumerate(self.cations):
                 _frac = []
                 for j, cond in enumerate(self.conds):
                     _frac.append(self.h5[cond].attrs['fracs'][i][0])
                 self.df_data[cation] = _frac
+                fracs.append(_frac)
             self.df_data['cations'] = [self.cations for _ in range(self.size)]
+            self.df_data['fracs'] = (np.array(fracs).T).tolist()
 
 
         if 'xx' in list(self.h5[self.conds[0]].attrs):
@@ -173,7 +175,7 @@ class datamodel():
             phase_dict[phase]['Tpeak'] = sub_df['Tpeak'].to_list()
             phase_dict[phase]['refined_lps'] = sub_df['refined_lps'].to_list()
             if hasattr(self, 'cations'):
-                for j, cation in enumerate(self.cations):
+                for _, cation in enumerate(self.cations):
                     phase_dict[phase][cation] = sub_df[cation].to_list()
 
         return phase_dict
@@ -187,7 +189,7 @@ class datamodel():
         lp_dict["x"] = self.df.loc[indicies, 'x'].to_list()
         lp_dict["y"] = self.df.loc[indicies, 'y'].to_list()
         cations = self.get_cations()
-        for j, cation in enumerate(cations):
+        for _, cation in enumerate(cations):
             lp_dict[cation] = self.df.loc[indicies, cation].to_list()
         lp_dict["refined_lps"] = self.df.loc[indicies, 'refined_lps'].to_list()
         lp_dict["refined_lps_uncer"] = self.df.loc[indicies, 'refined_lps_uncer'].to_list()

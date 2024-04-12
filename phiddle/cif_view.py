@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
 )
 # from matplotlib.backends.backend_qtagg import (
 #     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
-from matplotlib.figure import Figure
+# from matplotlib.figure import Figure
 
 
 class CIFView(QWidget):
@@ -49,7 +49,7 @@ class CIFView(QWidget):
             else:
                 checkbox = self.widget_ls[idx]
                 checkbox.setText(cif)
-        for idx, widget in enumerate(self.widget_ls):
+        for idx, _ in enumerate(self.widget_ls):
             if idx >= len(cif_list):
                 self.layout.removeWidget(self.widget_ls[idx])
         diff = len(self.widget_ls) - len(cif_list)
