@@ -254,8 +254,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             for phase in all_phases:
                 storing_ds[phase] = self.model.get_dict_for_lp_plot(phase) # FIXME: Load this as well
             storing_ds["phases"] = self.model.get_phases()
-            storing_ds["csv_path"] = os.path.abspath(self.csv_path)
-            storing_ds["h5_path"] = os.path.abspath(self.h5_path)
+            storing_ds["csv_path"] = os.path.abspath(self.csv_path) if self.csv_path else ""
+            storing_ds["h5_path"] = os.path.abspath(self.h5_path) if self.h5_path else ""
             with open(self.save_fn, 'w') as f:
                 json.dump(storing_ds, f)
 

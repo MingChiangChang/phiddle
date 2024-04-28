@@ -7,7 +7,7 @@ import copy as cp
 from astropy.modeling import models, fitting
 
 
-def get_center_asym(data, left_fwhm = 1., right_fwhm = 1., window = 51):
+def get_center_asym(data, left_fwhm = 1., right_fwhm = 1., window = 21):
     # Using the correlation method
     im1 = np.array(data[:,:])
     im = cp.deepcopy(im1)
@@ -26,7 +26,7 @@ def get_center_asym(data, left_fwhm = 1., right_fwhm = 1., window = 51):
     smoothed = smoothed/np.max(smoothed)
     eps = 0.01
     #for i_center in range(int(im1.shape[1]*0.25), int(im1.shape[1]*0.75)):
-    for i_center in range(int(im1.shape[1]*0.01), int(im1.shape[1]*0.99)):
+    for i_center in range(max(1, int(im1.shape[1]*0.01)), int(im1.shape[1]*0.99)):
         left = smoothed[:, :i_center]
         right = smoothed[:, i_center:]
         cs = CubicSpline(x[i_center:], right, axis = -1) # interpolate rows

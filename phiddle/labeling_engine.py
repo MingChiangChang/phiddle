@@ -89,7 +89,6 @@ class labeler():
         sort_idx = np.argsort(t)[::-1]
         self.results = (np.array(results)[sort_idx]).tolist()
         self.t = sorted(t, reverse=True)
-
         # self.t, self.results = zip(*sorted(zip(t, results), reverse=True))
 
         fractions = get_fraction(self.results[0].phase_model.CPs)

@@ -316,9 +316,8 @@ class stripeview(FigureCanvasQTAgg):
         (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
         (self.temp_selection_box, ) = self.temp_profile.plot(self.x, self.temp_y, color='r') 
 
-        self.temp_profile_func = two_lorentz(self.tpeak,
-                                             0.,
-                      self.left_width, self.right_width)
+        self.temp_profile_func = two_lorentz(self.tpeak, 0.,
+                                             self.left_width, self.right_width)
 
         self.heatmap.imshow(self.data,
                             extent=(self.xaxis[0], self.xaxis[-1], self.q[-1], self.q[0]),
