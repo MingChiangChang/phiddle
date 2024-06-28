@@ -54,6 +54,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.cifview.update_cif_list(
                 [phase.name for phase in self.labeler.phases])
 
+        # self.keyboardwidget = KeyboardWidget()
+        # self.keyboardWidget.keyPressed.connect(self.key_pressed())
+
         self.phase_diagram_view = PhaseDiagramView()
         self.phase_diagram_list = PhaseDiagramList()
         self.phase_diagram_list.save_signal.connect(
@@ -441,7 +444,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             np.save(fn, d)
 
     def save_button_clicked(self):
-        filename = self.model.current_filename
+        filename = self.stripeview.get_file_name() # self.model.current_filename
         d = np.vstack((self.stripeview.avg_q, self.stripeview.avg_pattern))
         fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
 
@@ -554,6 +557,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             event.accept()
         else:
             event.ignore()  #
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_Left:
+            self.stripeview.move(-1)
+        if event.key() == QtCore.Qt.Key.Key_Right:
+            self.stripeview.move(1)
 
 
 if __name__ == "__main__":

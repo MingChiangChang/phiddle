@@ -84,6 +84,75 @@ class stripeview(FigureCanvasQTAgg):
                          self.spectra_right_x,
                          self.spectra_left_x])
 
+
+    def move(self, move_idx):
+        # self.LeftX += move_idx 
+        # self.RightX += move_idx 
+
+        self.spectra_left_x = np.min(self.q)
+        self.spectra_right_x = np.max(self.q)
+
+        self.t = self.get_temperature(self.LeftX) # This can be a get-only property
+        self.heatmap.set_title(self.get_title(self.t)) 
+
+        if self.LeftX == self.RightX: # Repeating code
+            self.t = self.get_temperature(self.LeftX)
+            self.heatmap.set_title(self.get_title(self.t))
+        else:
+            self.t_left = self.get_temperature(self.LeftX)
+            self.t_right = self.get_temperature(self.RightX)
+            self.heatmap.set_title(self.get_title(self.t_left, self.t_right))
+                                   
+
+        # Let this be here for now
+        q_min_ind = find_first_larger(self.q, self.bottomY)
+        q_max_ind = find_first_smaller(self.q, self.topY)
+
+        self.x_min_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX)) + move_idx
+        self.x_max_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.RightX)) + move_idx
+        self.x_min_ind, self.x_max_ind = self.check_bounds(self.x_min_ind, self.x_max_ind)
+
+        self.LeftX = self.transfrom_data_idx_to_x(self.x_min_ind) + 1
+        self.RightX = self.transfrom_data_idx_to_x(self.x_max_ind) + 1
+        
+        if self.LeftX == self.RightX:
+            self.avg_pattern = self.data[q_min_ind:q_max_ind, self.x_min_ind]
+        else:
+            self.avg_pattern = np.mean(
+                self.data[q_min_ind:q_max_ind, self.x_min_ind:self.x_max_ind], axis=1)
+        self.avg_q = self.q[q_min_ind:q_max_ind]
+        pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
+
+
+        try:
+            self.aspan.remove()
+        except BaseException:
+            pass
+
+        self.aspan = self.heatmap.axvspan(self.LeftX, self.RightX, 0, 1, color='b', alpha=0.25,)
+
+        self.spectra.clear()
+        (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
+        # (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
+
+
+        self.selection_box.set_xdata(self.x)
+        self.temp_selection_box.set_xdata(self.x)
+        self.selection_box.set_ydata(self.y)
+        self.draw()
+
+        self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
+        self.spectra.set_xlim((self.avg_q[0], self.avg_q[-1]))
+
+        if self.fit_result is not None:
+            self.plot_scaled_results(_min, _max, q_min_ind, q_max_ind)
+
+        self.spectra.set_ylim((-0.3, 1.1))
+        self.spectra.set_ylabel("Avg intensity (a.u.)")
+        self.spectra.legend(fontsize=7, loc="upper right")
+        self.draw()
+
+
     def onclick(self, event):
 
         if event.inaxes in [self.heatmap]:
@@ -110,6 +179,7 @@ class stripeview(FigureCanvasQTAgg):
                 pass
 
             self.moving = True
+
 
 
     def onrelease(self, event):
@@ -155,12 +225,7 @@ class stripeview(FigureCanvasQTAgg):
             self.temp_selection_box.set_xdata(self.x)
             self.selection_box.set_ydata(self.y)
 
-            self.aspan = self.heatmap.axvspan(
-                self.LeftX, self.RightX,
-                0, 1,
-                color='b',
-                alpha=0.25,
-            )
+            self.aspan = self.heatmap.axvspan(self.LeftX, self.RightX, 0, 1, color='b', alpha=0.25,)
 
             self.moving = False
             if self.LeftX > self.RightX:
@@ -444,7 +509,7 @@ class stripeview(FigureCanvasQTAgg):
         s = cond.split('_')
         return float(s[3]), float(s[1])
 
-    def get_title(self, t_left, t_right=None):
+    def get_title(self, t_left, t_right=None): # Sloppy probably should get from Model
 
         title = f"Tpeak: {int(self.tpeak)}C Dwell: {int(self.dwell)}us" 
         if t_right is None:
@@ -460,6 +525,25 @@ class stripeview(FigureCanvasQTAgg):
 
         return title
 
+
+    def get_file_name(self): # Sloppy probably should get from Model
+
+        filename = f"tau_{int(self.dwell)}us_" 
+
+        if self.LeftX == self.RightX:
+            self.t = self.get_temperature(self.LeftX)
+            filename += f"T_{int(self.t)}"
+        else:
+            self.t_left = self.get_temperature(self.LeftX)
+            self.t_right = self.get_temperature(self.RightX)
+            filename += f"Tleft_{int(self.t_left)}_Tright_{int(self.t_right)}"
+
+        if hasattr(self, 'cations'):
+            for cation, frac in zip(self.cations, self.fracs):
+                filename += "_"
+                filename += f"{cation}_{frac:.3f}"
+        return filename
+
     def get_temperature(self, x_idx):
         # x_idx has different meaning depending on xx
         _x_idx = np.array(x_idx)
@@ -468,8 +552,23 @@ class stripeview(FigureCanvasQTAgg):
         return self.temp_profile_func(_x_idx*10) # 10 um per column
 
 
-    def transfrom_x_to_data_idx(self, idx):
-        return int(idx/len(self.xaxis) * self.data.shape[1])
+    def transfrom_x_to_data_idx(self, x):
+        data_idx = int(x/len(self.xaxis) * self.data.shape[1])
+        if data_idx >= self.data.shape[1]:
+            return self.data.shape[1]-1
+        return max(0, data_idx)
+
+    def transfrom_data_idx_to_x(self, x):
+        return int(self.xaxis[0] + x / self.data.shape[1] * len(self.xaxis))
+
+    def check_bounds(self, *args):
+        r = []
+        for a in args:
+            if a >= self.data.shape[1]-1:
+                r.append(self.data.shape[1]-1)
+            else:
+                r.append(max(0, a))
+        return r
 
     def rescale(self, d, _min, _max):
         d = minmax_denorm(d, self._min, self._max)

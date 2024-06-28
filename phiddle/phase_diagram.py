@@ -62,7 +62,8 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                                                phase_dict[phase][axes[1]],
                                                label="Other" if idx==0 else "_other",
                                                color="#DFDFDF", #'k', #COLORS[((idx+1) % len(COLORS)-1)],
-                                               alpha=1.)
+                                               alpha=1., 
+                                               s=4.)
 
 
             self.phase_diagram.set_xlim(xlim)
@@ -112,7 +113,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                                                transform[1](phase_dict[phase][axes[1]]),
                                                zs = transform[2](phase_dict[phase][axes[2]]),
                                                label="Other" if idx==0 else "_other",
-                                               s=50,
+                                               s=10,
                                                color="#DFDFDF",#'k', #COLORS[((idx+1) % len(COLORS)-1)],
                                                alpha=1.)
 
