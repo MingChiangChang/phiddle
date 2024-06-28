@@ -16,7 +16,46 @@ def twod_surface(base, a, b, c, d, e):
 def cubic_surface(base, a, b, c, d, e, f, g):
     return lambda x, y: base + a*x + b*y + c*x**2 + d*y**2 + e*x*y + f*x**4 + g*y**4
 
-def left_right_width(tau, Temp):
+########### Year 2023 #################
+def left_right_width_2023(tau, Temp):
+    left_width_fit = [ 7.93197988e+02,
+                   2.34346130e+01,
+                   -4.29544003e+01,
+                   4.68763599e+01,
+                   9.64778097e-01,
+                   -4.95937074e+00,
+                   -1.68873411e+00,
+                   -9.11029166e-05]
+    right_width_fit = [ 4.39339896e+02,
+                       -4.51657906e+01,
+                       -9.35886967e+00,
+                       -3.51825565e+00,
+                       -2.20075111e-02,
+                       2.44098710e+00]
+    left_width = cubic_surface(*left_width_fit) 
+    right_width = twod_surface(*right_width_fit)
+    log10_velocity = np.log10(88200./tau)
+    power = LaserPowerMing_Spring2023(tau, Temp, temp_fit = None)
+    return left_width(log10_velocity, power), right_width(log10_velocity, power)
+
+def LaserPowerMing_Spring2023(dwell, Tpeak, temp_fit = None):
+    if temp_fit is None:
+        temp_fit = [-0.06688143,
+                     0.22353149,
+                     -0.0556677,
+                     0.20606041,
+                     2.43702215] 
+
+    velo = 88200/dwell
+    log10vel = np.log10(velo)
+    get_power = inverse_temp_surface_func(*temp_fit) 
+    power = get_power(log10vel, Tpeak)
+    return power
+########### End of Year 2023 #################
+
+########### Year 2024 #################
+
+def left_right_width_2024(tau, Temp):
     left_width_fit = [ 9.23610385e+02,
                        2.31591101e+02,
                       -2.33724136e+01,
@@ -49,6 +88,8 @@ def LaserPowerMing_Spring2024(dwell, Tpeak, temp_fit = None):
     get_power = inverse_temp_surface_func(*temp_fit) 
     power = get_power(log10vel, Tpeak)
     return power
+
+########### End of Year 2024 #################
 
 if __name__ == '__main__':
     pass

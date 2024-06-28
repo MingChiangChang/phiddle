@@ -25,7 +25,6 @@ from lattice_param_view import LatticeParamView, LatticeParamList
 from popup import Popup
 from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
-from temp_profile import left_right_width
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
@@ -87,7 +86,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.lattice_param_list.dim_change_signal.connect(self.lattice_param_view.change_dim)
         self.lattice_param_list.axes_signal.connect(self.lattice_param_view.change_axes)
 
-        self.popup.set_clicked.connect(self.update_labeler_hyperparams)
+        self.popup.set_clicked.connect(self.update_params)
 
         label_button = QPushButton()
         label_button.setText("Label")
@@ -357,8 +356,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             for ind, phases in tqdm(zip(indicies, phase_ls)):
                 data_dict = self.model.get_lps_update_dict()
                 data = self.model[ind]
-                left_width, right_width = left_right_width(self.model.df['Tpeak'][ind],
-                                                           self.model.df['Dwell'][ind])
+                left_width, right_width = self.stripeview.left_right_width(
+                                   self.model.df['Tpeak'][ind],
+                                   self.model.df['Dwell'][ind]
+                              )
                 center = get_center_asym(data['data'], left_width, right_width)
                 y, _, _ = minmax_norm(data['data'][:, center])
                 q = data['q']
@@ -458,18 +459,21 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             else:
                 np.save(fn, d)
 
+
     def change_ind(self, change):
         self.ind += change
+
 
     def add_to_phase_diagram(self, isChecked_list):
         phase_names = self.labeler.get_phase_names(isChecked_list)
         self.model.add_to_phase_diagram(phase_names)
 
-    def update_labeler_hyperparams(self, std_noise, mean, std, max_phase,
-            expand_degree, background_length, max_iter, optimize_mode, background_option):
-        self.labeler.set_hyperparams(
-            std_noise, mean, std, max_phase, expand_degree, background_length,
-            max_iter, optimize_mode, background_option)
+
+    def update_params(self, std_noise, mean, std, max_phase,
+                      expand_degree, background_length, max_iter, optimize_mode, background_option, year):
+        self.labeler.set_hyperparams(std_noise, mean, std, max_phase, expand_degree, background_length,
+                                        max_iter, optimize_mode, background_option)
+        self.stripeview.set_temp_profile_params_by_year(year)
 
 
     def next_label_result(self):

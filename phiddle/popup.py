@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 
 class Popup(QWidget):
 
-    set_clicked = pyqtSignal(float, list, list, int, int, float, int, str, str)
+    set_clicked = pyqtSignal(float, list, list, int, int, float, int, str, str, str)
 
     def __init__(self, parent=None):
 
@@ -63,6 +63,12 @@ class Popup(QWidget):
         self.background_options = ["MCBL", "Default", "None"]
         self.background_dropdown.addItems(self.background_options)
 
+        self.temp_profile_prompt = QLabel()
+        self.temp_profile_prompt.setText("Temp profile year")
+        self.temp_profile_dropdown = QComboBox()
+        self.temp_profile_year_options = ["2024", "2023"] # IDEA: These option can be made into a config file
+        self.temp_profile_dropdown.addItems(self.temp_profile_year_options)
+
         grid_layout.addWidget(self.std_noise_prompt, 0, 0)
         grid_layout.addWidget(self.std_noise_edit, 0, 1)
         grid_layout.addWidget(self.mean_prompt, 1, 0)
@@ -85,6 +91,8 @@ class Popup(QWidget):
         grid_layout.addWidget(self.optimize_mode_dropdown, 3, 3)
         grid_layout.addWidget(self.background_option_prompt, 4, 2)
         grid_layout.addWidget(self.background_dropdown, 4, 3)
+        grid_layout.addWidget(self.temp_profile_prompt, 7, 0)
+        grid_layout.addWidget(self.temp_profile_dropdown, 7, 1)
 
         set_button = QPushButton()
         set_button.setText("Set")
@@ -137,6 +145,7 @@ class Popup(QWidget):
             max_iter = int(self.max_iter_edit.text())
             optimize_mode = self.optimize_mode_dropdown.currentText()
             background_option = self.background_dropdown.currentText()
+            temp_year_option = self.temp_profile_dropdown.currentText()
 
             self.set_clicked.emit(std_noise,
                                   [mean_0, mean_1, mean_2],
@@ -146,7 +155,8 @@ class Popup(QWidget):
                                   background_length,
                                   max_iter,
                                   optimize_mode,
-                                  background_option)
+                                  background_option,
+                                  temp_year_option)
             self.close()
         except ValueError:
             print("The value cannot be convert to numbers.")

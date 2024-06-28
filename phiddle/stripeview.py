@@ -13,7 +13,7 @@ import matplotlib.lines as mlines
 from util import (minmax_norm, minmax_denorm, COLORS, find_first_larger,
                   find_first_smaller, two_lorentz)
 from pyPhaseLabel import evaluate_obj
-from temp_profile import LaserPowerMing_Spring2024, left_right_width
+from temp_profile import LaserPowerMing_Spring2024, left_right_width_2024, left_right_width_2023
 from center_finder_asym import get_center_asym
 
 
@@ -50,6 +50,18 @@ class stripeview(FigureCanvasQTAgg):
         self.cid3 = self.mpl_connect("motion_notify_event", self.onmotion)
 
         self.fit_result = None
+        self.left_right_width = left_right_width_2024
+
+    def set_temp_profile_params_by_year(self, year):
+        if int(year) == 2024:
+            self.left_right_width = left_right_width_2024
+            return
+        if int(year) == 2023:
+            self.left_right_width = left_right_width_2023
+            return
+        print("Year specified does not exist. This shouldn't happen.",
+              "Please contact Ming!")
+        # TODO: Add a replot function and update temp profile immediately
 
     @property
     def x(self):
@@ -346,7 +358,7 @@ class stripeview(FigureCanvasQTAgg):
         self.tpeak, self.dwell = data['Tpeak'], data['Dwell'] # self.get_tpeak_dwell_from_cond(self.cond)
         self.t_left = self.tpeak
         self.temp_topY = self.tpeak
-        self.left_width, self.right_width = left_right_width(self.dwell, self.tpeak)
+        self.left_width, self.right_width = self.left_right_width(self.dwell, self.tpeak)
         self.center = get_center_asym(self.data, self.left_width, self.right_width) # FIXME: This should be handled a layer higher
 
         self.comp_title = ""
