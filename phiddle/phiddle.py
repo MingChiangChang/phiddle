@@ -563,9 +563,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             event.ignore()  #
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key.Key_Left:
+        if event.key() == QtCore.Qt.Key.Key_Left or event.text() in 'aA' :
             self.stripeview.move(-1)
-        if event.key() == QtCore.Qt.Key.Key_Right:
+        if event.key() == QtCore.Qt.Key.Key_Right or event.text() in 'dD':
             self.stripeview.move(1)
 
 
