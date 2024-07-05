@@ -96,6 +96,16 @@ class stripeview(FigureCanvasQTAgg):
                          self.spectra_right_x,
                          self.spectra_left_x])
 
+    def get_selected_frames(self):
+        return range(self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX)),
+                     self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))+1)
+
+    @property
+    def selected_temperature(self):
+        r = self.get_selected_frames()
+        x_pos = list(map(self.transform_data_idx_to_x, r))
+        return self.temp_profile_func(np.array(x_pos))
+
 
     def move(self, move_idx):
         # self.LeftX += move_idx 
@@ -120,12 +130,12 @@ class stripeview(FigureCanvasQTAgg):
         q_min_ind = find_first_larger(self.q, self.bottomY)
         q_max_ind = find_first_smaller(self.q, self.topY)
 
-        self.x_min_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX)) + move_idx
-        self.x_max_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.RightX)) + move_idx
+        self.x_min_ind = self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX)) + move_idx
+        self.x_max_ind = self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.RightX)) + move_idx
         self.x_min_ind, self.x_max_ind = self.check_bounds(self.x_min_ind, self.x_max_ind)
 
-        self.LeftX = self.transfrom_data_idx_to_x(self.x_min_ind) + 1
-        self.RightX = self.transfrom_data_idx_to_x(self.x_max_ind) + 1
+        self.LeftX = self.transform_data_idx_to_x(self.x_min_ind) + 1
+        self.RightX = self.transform_data_idx_to_x(self.x_max_ind) + 1
         
         if self.LeftX == self.RightX:
             self.avg_pattern = self.data[q_min_ind:q_max_ind, self.x_min_ind]
@@ -256,9 +266,8 @@ class stripeview(FigureCanvasQTAgg):
             q_min_ind = find_first_larger(self.q, self.bottomY)
             q_max_ind = find_first_smaller(self.q, self.topY)
 
-            self.x_min_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX))
-            self.x_max_ind = self.transfrom_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))
-
+            self.x_min_ind = self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX))
+            self.x_max_ind = self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))
             
             if self.LeftX == self.RightX:
                 self.avg_pattern = self.data[q_min_ind:q_max_ind, self.x_min_ind]
@@ -552,7 +561,7 @@ class stripeview(FigureCanvasQTAgg):
 
         if hasattr(self, 'cations'):
             for cation, frac in zip(self.cations, self.fracs):
-                filename += "_"
+                filename += "_self."
                 filename += f"{cation}_{frac:.3f}"
         return filename
 
@@ -564,13 +573,13 @@ class stripeview(FigureCanvasQTAgg):
         return self.temp_profile_func(_x_idx*10) # 10 um per column
 
 
-    def transfrom_x_to_data_idx(self, x):
+    def transform_x_to_data_idx(self, x):
         data_idx = int(x/len(self.xaxis) * self.data.shape[1])
         if data_idx >= self.data.shape[1]:
             return self.data.shape[1]-1
         return max(0, data_idx)
 
-    def transfrom_data_idx_to_x(self, x):
+    def transform_data_idx_to_x(self, x):
         return int(self.xaxis[0] + x / self.data.shape[1] * len(self.xaxis))
 
     def check_bounds(self, *args):

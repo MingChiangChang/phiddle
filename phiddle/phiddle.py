@@ -25,6 +25,7 @@ from lattice_param_view import LatticeParamView, LatticeParamList
 from popup import Popup
 from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
+from datastructure import LabelData, PatternLabel
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
@@ -40,6 +41,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.h5_path = h5_path
         self.csv_path = csv_path
         self.model = datamodel()
+        self.labeldata = LabelData()
         self.labeler = labeler()
         self.cifview = CIFView([])
         self.popup = Popup()
@@ -252,6 +254,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         if self.save_fn:
             storing_ds = {}
             storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
+            # storing_ds["phases_diagram"] = self.labeldata.get_dict_for_phase_diagram()
+
             all_phases = self.model.get_all_phases()
             for phase in all_phases:
                 storing_ds[phase] = self.model.get_dict_for_lp_plot(phase) # FIXME: Load this as well
@@ -320,13 +324,15 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def update_pd_tab(self):
-        phase_dict = self.model.get_dict_for_phase_diagram()
+        # phase_dict = self.model.get_dict_for_phase_diagram()
+        phase_dict = self.labeldata.get_dict_for_phase_diagram()
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes())
         self.phase_diagram_list.show(list(phase_dict))
 
     def update_pd_plot(self, mask):
-        phase_dict = self.model.get_dict_for_phase_diagram()
+        # phase_dict = self.model.get_dict_for_phase_diagram()
+        phase_dict = self.labeldata.get_dict_for_phase_diagram()
         # FIXME: Bug after changing h5s
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
@@ -467,6 +473,16 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def add_to_phase_diagram(self, isChecked_list):
         phase_names = self.labeler.get_phase_names(isChecked_list)
         self.model.add_to_phase_diagram(phase_names)
+        temps = self.stripeview.selected_temperature
+        x_indices = self.stripeview.get_selected_frames()
+
+        for t, x in zip(temps, x_indices):
+            self.labeldata.update(t,
+                                  self.model.current_dwell,
+                                  self.model.current_composition,
+                                  phase_names,
+                                  self.model.current_ind, 
+                                  x)
 
 
     def update_params(self, std_noise, mean, std, max_phase,

@@ -3,7 +3,6 @@ import json
 
 import numpy as np
 import pandas as pd
-from scipy.interpolate import CubicSpline
 import h5py
 
 from util import collect_data_and_q, collect_conditions, collect_positions, get_condition
@@ -24,7 +23,7 @@ class datamodel():
         self.df_data['y'] = [0]
         self.df_data['fracs'] = [0]
         self.df_data['cation'] = [""]
-        self.df_data["phases"] = [[] for i in range(self.size)]
+        self.df_data["phases"] = [[] for _ in range(self.size)]
         self.df_data["refined_lps"] = [[] for _ in range(self.size)]
         self.df_data["refined_lps_uncer"] = [[] for _ in range(self.size)] 
         self.df_data["act"] = [[] for _ in range(self.size)]
@@ -35,7 +34,10 @@ class datamodel():
 
         self.df = pd.DataFrame(self.df_data)
 
-        
+    @property
+    def current_ind(self):
+        return self._ind
+
     def read_h5(self, file_path, q_path=None):
         self.df_data = {}
         self.h5_path = file_path  # keep for now, may be redundent
@@ -68,7 +70,7 @@ class datamodel():
 
         if 'xx' in list(self.h5[self.conds[0]].attrs):
             xx = []
-            for idx, cond in enumerate(self.conds):
+            for _, cond in enumerate(self.conds):
                 xx.append(self.h5[cond].attrs['xx'])
             self.df_data['xx'] = xx
 
@@ -265,7 +267,11 @@ class datamodel():
         self._ind = new_ind
         self.current_dwell, self.current_tpeak = get_condition(
             self.conds[new_ind])
-
+        if hasattr(self, 'cations'):
+            self.current_composition = {c: f for c, f in zip(self.df.iloc[new_ind]['cations'],
+                                          self.df.iloc[new_ind]['fracs'])}
+        else:
+            self.current_composition = dict()
 
     @property
     def current_x(self):
