@@ -17,21 +17,24 @@ class PatternLabel():
 class LabelData():
     """ This data structure keep track of finer phase labeling details """
 
-    def __init__(self, ):
+    def __init__(self):
         self.labels = []
         self.sample_nums = []
         self.x_indices = {} 
         
+    def __getitem__(self, idx):
+        return self.labels[idx]
+
     def update(self, tpeak, dwell, composition, phase, sample_num, x_idx):
         if not sample_num in self.sample_nums:
             self.labels.append(PatternLabel(tpeak, dwell, composition, phase, sample_num, x_idx))
             self.sample_nums.append(sample_num)
-            self.x_indices[sample_num] = [x_idx]
+            self.x_indices[str(sample_num)] = [x_idx] # official python json automatically makes key to be strings
             return 
 
-        if not x_idx in self.x_indices[sample_num]:
+        if not x_idx in self.x_indices[str(sample_num)]:
             self.labels.append(PatternLabel(tpeak, dwell, composition, phase, sample_num, x_idx))
-            self.x_indices[sample_num].append(x_idx) 
+            self.x_indices[str(sample_num)].append(x_idx) 
             return
 
         # If its entry is already in there, do O(n) search 
@@ -42,6 +45,20 @@ class LabelData():
             if label.sample_num == sample_num: 
                 if label.x_idx == x_idx:
                     label.phase = phase
+
+    def load_stored_label_data(self, data):
+        if 'labels' not in data:
+            return
+        self.labels = [PatternLabel(**d) for d in data['labels']]
+        self.sample_nums = data['sample_nums']
+        self.x_indices = data['x_indices']
+
+    def serialize_data(self):
+        d = {}
+        d['labels'] = [label.__dict__ for label in self.labels]
+        d['sample_nums'] = self.sample_nums 
+        d['x_indices'] = self.x_indices
+        return d 
 
     def get_dict_for_phase_diagram(self):
 

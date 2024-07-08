@@ -5,7 +5,10 @@ import numpy as np
 import pandas as pd
 import h5py
 
-from util import collect_data_and_q, collect_conditions, collect_positions, get_condition
+from temp_profile import left_right_width_2024, left_right_width_2023
+from center_finder_asym import get_center_asym
+from util import collect_data_and_q, collect_conditions, collect_positions, get_condition, two_lorentz
+from datastructure import LabelData
 
 
 class datamodel():
@@ -23,7 +26,7 @@ class datamodel():
         self.df_data['y'] = [0]
         self.df_data['fracs'] = [0]
         self.df_data['cation'] = [""]
-        self.df_data["phases"] = [[] for _ in range(self.size)]
+        self.df_data["phases"] = [[] for _ in range(self.size)] # TODO: Now this always stores the phases labeled last, instead store only the one at the center
         self.df_data["refined_lps"] = [[] for _ in range(self.size)]
         self.df_data["refined_lps_uncer"] = [[] for _ in range(self.size)] 
         self.df_data["act"] = [[] for _ in range(self.size)]
@@ -33,10 +36,9 @@ class datamodel():
         self.df_data["is_refined"] = [False for _ in range(self.size)]
 
         self.df = pd.DataFrame(self.df_data)
+        self.left_right_width = left_right_width_2024
+        self.labeldata = LabelData()
 
-    @property
-    def current_ind(self):
-        return self._ind
 
     def read_h5(self, file_path, q_path=None):
         self.df_data = {}
@@ -82,9 +84,21 @@ class datamodel():
         self.df_data["width"] = [[] for _ in range(self.size)]
         self.df_data["width_uncer"] = [[] for _ in range(self.size)]
         self.df_data["is_refined"] = [False for _ in range(self.size)]
+        self.df_data["center_idx"] = [None for _ in range(self.size)]
 
         self.current_dwell, self.current_tpeak = get_condition(self.conds[self._ind])
         self.df = pd.DataFrame(self.df_data)
+
+    def clear_label_data(self):
+        self.labeldata = LabelData()
+
+
+    def get_xaxis_size(self):
+        return self.df['data'][self.ind].shape[1]
+
+
+    def set_current_center(self, center):
+        self.df.at[self.ind, "center_idx"] = center
 
 
     def get_cations(self):
@@ -95,6 +109,16 @@ class datamodel():
 
     def update(self, ind):
         self.ind = ind
+
+    def set_temp_profile_params_by_year(self, year):
+        if int(year) == 2024:
+            self.left_right_width = left_right_width_2024
+            return
+        if int(year) == 2023:
+            self.left_right_width = left_right_width_2023
+            return
+        print("Year specified does not exist. This shouldn't happen.",
+              "Please contact Ming!")
 
 
     def get_lps_update_dict(self):
@@ -230,6 +254,24 @@ class datamodel():
         return refined_lp
 
 
+    def update_temp_profile_for_stored_labels(self):
+        # Go throgh labeled data, find the ones that belongs to 
+        for label in self.labeldata:
+            if label.sample_num == self.current_ind:
+                label.tpeak = self.temp_func(np.array(self.transform_data_idx_to_x(label.x_idx)))
+
+        # print(self.labeldata.sample_nums)
+        # sns = [i for i, sample_num in enumerate(self.labeldata.sample_nums) if sample_num == self.current_ind]
+        # for i, sn in enumerate(sns):
+        #     x_ind = self.labeldata.x_indices[str(sn)]
+        #     x_pos = self.transform_data_idx_to_x(np.array(x_ind))
+
+        
+
+    @property
+    def current_ind(self):
+        return self._ind
+
     @property
     def labeled(self):
         return [bool(phase) for phase in self.df['phases']]
@@ -253,6 +295,41 @@ class datamodel():
         if 'xx' in self.df:
             return self.df['xx'][self.ind]
         return None
+
+    def get_current_temp_profile(self):
+        left_width, right_width = self.left_right_width(self.current_dwell, self.current_tpeak)
+        temp_func = two_lorentz(self.current_tpeak, 0., left_width, right_width)
+
+        if self.df['center_idx'][self.ind] is None:
+            self.df.at[self.ind, 'center_idx'] = get_center_asym(self.df['data'][self.ind], left_width, right_width)
+
+        xaxis = self.get_current_xaxis()
+        self.xaxis = xaxis           
+        self.temp_func = temp_func           
+        return xaxis, temp_func
+
+    def get_current_xaxis(self):
+        if self.current_xx is not None:
+            xmin = self.current_xx[0]
+            xmax = self.current_xx[-1]
+            xaxis = np.arange(xmax-xmin)# (xmax-xmin)/2
+            xaxis -= xaxis[int(len(xaxis)*self.df['center_idx'][self.ind]/len(self.current_xx))]
+        else:
+            xmin = 0
+            xmax = self.df['data'][self.ind].shape[1]
+            xaxis = np.arange(xmax-xmin) * 10 # 10 um per column
+            xaxis -= xaxis[self.df['center_idx'][self.ind]]
+        self.xaxis = xaxis
+        return xaxis #self.current_xx 
+
+
+    def get_stripe_xlabel(self):
+        if self.current_xx is None: return "Index"
+        return "Location (um)"
+
+    @property
+    def current_center(self):
+        return self.df['center_idx'][self.ind]
 
 
     @property
@@ -292,3 +369,7 @@ class datamodel():
                 frac = self.h5[self.conds[self._ind]].attrs['fracs'][idx][0]
                 filename += f'_{cation}_{frac:.3f}'
         return filename
+
+
+    def transform_data_idx_to_x(self, x):
+        return int(self.xaxis[0] + x / self.df['data'][self.ind].shape[1] * len(self.xaxis))
