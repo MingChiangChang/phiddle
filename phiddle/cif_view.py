@@ -28,9 +28,12 @@ class CIFView(QWidget):
             self.widget_ls.append(checkbox)
             self.layout.addWidget(checkbox)
         self.amorphous_checkbox = QCheckBox("Amorphous")
+        self.melt_checkbox = QCheckBox("Melt")
         # Should not let amorphous
         self.widget_ls.append(self.amorphous_checkbox)
+        self.widget_ls.append(self.melt_checkbox)
         self.layout.addWidget(self.amorphous_checkbox)  # Be hidden in the list
+        self.layout.addWidget(self.melt_checkbox)  # Be hidden in the list
 
         self.layout.addWidget(self.button)
         self.setLayout(self.layout)
@@ -39,9 +42,10 @@ class CIFView(QWidget):
         """ Reuse checkboxes  """
         self.layout.removeWidget(self.button)
         self.layout.removeWidget(self.amorphous_checkbox)
+        self.layout.removeWidget(self.melt_checkbox)
         del self.widget_ls[-1]  # amorphous checkbox is always the last one
         for idx, cif in enumerate(cif_list):
-            if idx >= len(self.widget_ls):
+            if idx >= len(self.widget_ls)-1: # Save 2 spots for Default options
                 checkbox = QCheckBox(cif)
                 checkbox.clicked.connect(self.update_stick_pattern)
                 self.widget_ls.append(checkbox)
@@ -57,13 +61,16 @@ class CIFView(QWidget):
             del self.widget_ls[-1]  # always remove the last one
 
         self.widget_ls.append(self.amorphous_checkbox)
+        self.widget_ls.append(self.melt_checkbox)
+        print(self.amorphous_checkbox.text())
         self.layout.addWidget(self.amorphous_checkbox)
+        self.layout.addWidget(self.melt_checkbox)
         self.layout.addWidget(self.button)
         self.clear()
 
     def update_stick_pattern(self):
         self.checked.emit([checkbox.isChecked()
-                          for checkbox in self.widget_ls[:-1]])
+                          for checkbox in self.widget_ls[:-2]])
 
     def add_to_phase_diagram(self):
         self.add.emit([checkbox.isChecked() for checkbox in self.widget_ls])
@@ -80,4 +87,4 @@ class CIFView(QWidget):
     def get_checked_phase_names(self):
         return [checkbox.text() for checkbox in self.widget_ls
                 if checkbox.isChecked()
-                if checkbox.text() != "Amorphous"]
+                if checkbox.text() != "Amorphous" and checkbox.text() != "Melt"]
