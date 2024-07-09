@@ -521,6 +521,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         temps = self.stripeview.selected_temperature
         x_indices = self.stripeview.get_selected_frames()
 
+
         for t, x in zip(temps, x_indices):
             self.model.labeldata.update(t,
                                   self.model.current_dwell,
@@ -528,6 +529,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                   phase_names,
                                   self.model.current_ind, 
                                   x)
+
+        labeled_indices = self.model.get_current_labeled_indices()
+        if labeled_indices:
+            self.stripeview.plot_label_progress(labeled_indices)
 
 
     def update_params(self, std_noise, mean, std, max_phase,
@@ -599,6 +604,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.model.current_data,
             xaxis=xaxis, #self.model.current_xx,
             temp_profile_func = temp_profile_func, xlabel=xlabel, xx = self.model.current_xx)
+
+        labeled_indices = self.model.get_current_labeled_indices()
+        if labeled_indices:
+            self.stripeview.plot_label_progress(labeled_indices)
 
         self.center_slider.setRange(0, len(xaxis)-1)
         self.center_slider.setValue(int((len(xaxis)-1)/2))

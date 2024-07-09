@@ -96,6 +96,8 @@ class datamodel():
     def get_xaxis_size(self):
         return self.df['data'][self.ind].shape[1]
 
+    def get_current_labeled_indices(self):
+        return self.labeldata.get_labeled_indices(self.ind)
 
     def set_current_center(self, center):
         self.df.at[self.ind, "center_idx"] = center
@@ -190,8 +192,6 @@ class datamodel():
                 all_phases.add(phase)
         return all_phases
 
-    def get_cations(self):
-        return self.cations
 
     def get_dict_for_phase_diagram(self):
         phase_dict = {}

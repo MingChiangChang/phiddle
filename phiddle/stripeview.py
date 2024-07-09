@@ -8,11 +8,14 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 import matplotlib.lines as mlines
 
-from util import (minmax_norm, minmax_denorm, COLORS, find_first_larger, find_first_smaller)
+from util import (minmax_norm, minmax_denorm, COLORS, find_first_larger,
+                  get_continue_patches, find_first_smaller)
 from pyPhaseLabel import evaluate_obj
 
 
 # TODO: This need major refactoring and abstraction
+#       1. Remove repetitive code in stripeview to make clear API
+#       2. Model should use emit so view controller has less thing to do
 class stripeview(FigureCanvasQTAgg):
 
     def __init__(self, parent=None):
@@ -383,6 +386,22 @@ class stripeview(FigureCanvasQTAgg):
             self.LeftX, self.RightX, color='k', alpha=0)
 
         self.draw()
+
+    def plot_label_progress(self, labeled_indices):
+        height = self.q[-10]-self.q[-1] 
+        start_width_ls = get_continue_patches(labeled_indices)
+        if not start_width_ls: return 
+        recs = []
+        for start_idx, width in start_width_ls:
+            recs.append(Rectangle([float(self.transform_data_idx_to_x(start_idx-0.5)), self.q[-1]],
+                          width*self.get_unit_length_x(), height))
+        pc = PatchCollection(recs, facecolor='lime', edgecolor='lime')
+        self.heatmap.add_collection(pc)
+        # self.heatmap.scatter(1000*np.random.rand(self.data.shape[1])-500,
+        #                      np.zeros(self.data.shape[1])+np.mean(self.q))
+        # self.heatmap.set_xlim(self.xaxis[0], self.xaxis[-1])
+        # self.heatmap.set_ylim(self.q[-1], self.q[0])
+        self.draw()
         
 
     def plot_new_data(self, data, xaxis, temp_profile_func, xlabel, xx=None, stick_patterns=None, ):
@@ -596,6 +615,9 @@ class stripeview(FigureCanvasQTAgg):
 
     def transform_data_idx_to_x(self, x):
         return int(self.xaxis[0] + x / self.data.shape[1] * len(self.xaxis))
+
+    def get_unit_length_x(self):
+        return  len(self.xaxis) / self.data.shape[1]
 
     def check_bounds(self, *args):
         r = []

@@ -87,6 +87,10 @@ class LabelData():
         else:
             return []
 
+    def get_labeled_indices(self, sample_num):
+        # if str(sample_num) in self.x_indices
+        # return self.x_indices[str(sample_num)]
+        return self.x_indices.get(str(sample_num), [])
 
 
     def get_all_phases(self):
