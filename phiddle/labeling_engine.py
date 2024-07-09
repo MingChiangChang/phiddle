@@ -205,11 +205,13 @@ class labeler():
                 get_fraction(self.results[self.label_ind].CPs),
                 self.bg)
 
-    def get_phase_names(self, isChecked_ls):
+    def get_phase_names(self, isChecked_ls): # TODO: Shouldn't this be in cif view?
         phase_names = [self.phases[idx].name for idx,
-                       check in enumerate(isChecked_ls[:-1]) if check]
-        if isChecked_ls[-1]:
+                       check in enumerate(isChecked_ls[:-2]) if check]
+        if isChecked_ls[-2]:
             phase_names.append("Amorphous")
+        if isChecked_ls[-1]:
+            phase_names.append("Melt")
         return phase_names
 
     @property
@@ -243,7 +245,7 @@ class labeler():
 
     def get_phase_w_phase_names(self, phase_names):
         return [self.phases[self.phase_names.index(
-            phase_name)] for phase_name in phase_names if phase_name != "Amorphous"]
+            phase_name)] for phase_name in phase_names if phase_name not in  ["Amorphous", "Melt"]]
 
     def get_dict_for_storing(self):
         datadict = {}

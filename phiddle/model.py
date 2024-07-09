@@ -190,6 +190,8 @@ class datamodel():
                 all_phases.add(phase)
         return all_phases
 
+    def get_cations(self):
+        return self.cations
 
     def get_dict_for_phase_diagram(self):
         phase_dict = {}

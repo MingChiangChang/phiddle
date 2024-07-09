@@ -340,14 +340,41 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         # TODO: have a combo box for full or center phase ploting
         phase_dict = self.model.get_dict_for_phase_diagram()
         phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
-        phase_dict.update(phase_dict_full)
+        cations = self.model.get_cations()
+
+        for phase in phase_dict_full:
+            if phase not in phase_dict:
+                phase_dict[phase] = {}
+                phase_dict[phase]['Dwell'] = []
+                phase_dict[phase]['Tpeak'] = []
+                for cation in cations:
+                    phase_dict[phase][cation] = []
+            phase_dict[phase]['Dwell'] += phase_dict_full[phase]['Dwell']
+            phase_dict[phase]['Tpeak'] += phase_dict_full[phase]['Tpeak']
+            for cation in cations:
+                phase_dict[phase][cation] += phase_dict_full[phase][cation]
+
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes())
         self.phase_diagram_list.show(list(phase_dict))
 
     def update_pd_plot(self, mask):
-        # phase_dict = self.model.get_dict_for_phase_diagram()
-        phase_dict = self.model.labeldata.get_dict_for_phase_diagram()
+        phase_dict = self.model.get_dict_for_phase_diagram()
+        phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
+        cations = self.model.get_cations()
+
+        for phase in phase_dict_full:
+            if phase not in phase_dict:
+                phase_dict[phase] = {}
+                phase_dict[phase]['Dwell'] = []
+                phase_dict[phase]['Tpeak'] = []
+                for cation in cations:
+                    phase_dict[phase][cation] = []
+            phase_dict[phase]['Dwell'] += phase_dict_full[phase]['Dwell']
+            phase_dict[phase]['Tpeak'] += phase_dict_full[phase]['Tpeak']
+            for cation in cations:
+                phase_dict[phase][cation] += phase_dict_full[phase][cation]
+
         # FIXME: Bug after changing h5s
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
@@ -360,6 +387,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         phase_names = list(phase_dict)
         if "Amorphous" in phase_names:
             phase_names.remove("Amorphous")
+        if "Melt" in phase_names:
+            phase_names.remove("Melt")
         phase_names.insert(0, "")
         self.lattice_param_list.update_phase_combo_box(phase_names)
 

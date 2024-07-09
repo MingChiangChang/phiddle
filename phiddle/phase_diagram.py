@@ -40,7 +40,6 @@ class PhaseDiagramView(FigureCanvasQTAgg):
             others = phase_name_ls[np.logical_not(mask)]
             phase_name_ls = phase_name_ls[mask]
 
-        
         if self.dim == 2:
             if self.fig.axes:
                 self.fig.gca().remove()
@@ -100,6 +99,9 @@ class PhaseDiagramView(FigureCanvasQTAgg):
 
 
             for idx, phase in enumerate(phase_name_ls):
+                # print("axes 0:",len(phase_dict[phase][axes[0]]), phase_dict[phase][axes[0]])
+                # print("axes 1:",len(phase_dict[phase][axes[1]]), phase_dict[phase][axes[1]])
+
                 self.phase_diagram.scatter(transform[0](phase_dict[phase][axes[0]]),
                                            transform[1](phase_dict[phase][axes[1]]),
                                            zs = transform[2](phase_dict[phase][axes[2]]),

@@ -79,7 +79,6 @@ class LabelData():
                 phase_dict[p]['Tpeak'].append(label.tpeak) 
                 for c in cation:
                     phase_dict[p][c].append(label.composition[c]) 
-
         return phase_dict 
         
     def get_cation(self):
