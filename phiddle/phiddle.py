@@ -487,7 +487,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def add_to_phase_diagram(self, isChecked_list):
         phase_names = self.labeler.get_phase_names(isChecked_list)
-        self.model.add_to_phase_diagram(phase_names)
+        if self.model.current_center in self.stripeview.get_selected_frames():
+            self.model.add_to_phase_diagram(phase_names)
         temps = self.stripeview.selected_temperature
         x_indices = self.stripeview.get_selected_frames()
 

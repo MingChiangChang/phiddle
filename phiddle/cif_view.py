@@ -44,8 +44,9 @@ class CIFView(QWidget):
         self.layout.removeWidget(self.amorphous_checkbox)
         self.layout.removeWidget(self.melt_checkbox)
         del self.widget_ls[-1]  # amorphous checkbox is always the last one
+        del self.widget_ls[-1]  # melt checkbox is second to last 
         for idx, cif in enumerate(cif_list):
-            if idx >= len(self.widget_ls)-1: # Save 2 spots for Default options
+            if idx >= len(self.widget_ls): # Save 2 spots for Default options
                 checkbox = QCheckBox(cif)
                 checkbox.clicked.connect(self.update_stick_pattern)
                 self.widget_ls.append(checkbox)
@@ -62,7 +63,6 @@ class CIFView(QWidget):
 
         self.widget_ls.append(self.amorphous_checkbox)
         self.widget_ls.append(self.melt_checkbox)
-        print(self.amorphous_checkbox.text())
         self.layout.addWidget(self.amorphous_checkbox)
         self.layout.addWidget(self.melt_checkbox)
         self.layout.addWidget(self.button)
