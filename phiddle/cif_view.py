@@ -11,6 +11,7 @@ class CIFView(QWidget):
 
     checked = pyqtSignal(list)
     add = pyqtSignal(list)
+    remove = pyqtSignal()
 
     def __init__(self, cif_list, parent=None):
 
@@ -19,9 +20,13 @@ class CIFView(QWidget):
         self.layout = QVBoxLayout()
 
         self.widget_ls = []
-        self.button = QPushButton()
-        self.button.setText("Add to phase diagram")
-        self.button.clicked.connect(self.add_to_phase_diagram)
+        self.add_button = QPushButton()
+        self.add_button.setText("Add to phase diagram")
+        self.add_button.clicked.connect(self.add_to_phase_diagram)
+
+        self.remove_button = QPushButton()
+        self.remove_button.setText("Remove from phase diagram")
+        self.remove_button.clicked.connect(self.remove_from_phase_diagram)
         for cif in cif_list:
             checkbox = QCheckBox(cif)
             checkbox.clicked.connect(self.update_stick_pattern)
@@ -35,12 +40,14 @@ class CIFView(QWidget):
         self.layout.addWidget(self.amorphous_checkbox)  # Be hidden in the list
         self.layout.addWidget(self.melt_checkbox)  # Be hidden in the list
 
-        self.layout.addWidget(self.button)
+        self.layout.addWidget(self.add_button)
+        self.layout.addWidget(self.remove_button)
         self.setLayout(self.layout)
 
     def update_cif_list(self, cif_list):
         """ Reuse checkboxes  """
-        self.layout.removeWidget(self.button)
+        self.layout.removeWidget(self.add_button)
+        self.layout.removeWidget(self.remove_button)
         self.layout.removeWidget(self.amorphous_checkbox)
         self.layout.removeWidget(self.melt_checkbox)
         del self.widget_ls[-1]  # amorphous checkbox is always the last one
@@ -65,7 +72,8 @@ class CIFView(QWidget):
         self.widget_ls.append(self.melt_checkbox)
         self.layout.addWidget(self.amorphous_checkbox)
         self.layout.addWidget(self.melt_checkbox)
-        self.layout.addWidget(self.button)
+        self.layout.addWidget(self.add_button)
+        self.layout.addWidget(self.remove_button)
         self.clear()
 
     def update_stick_pattern(self):
@@ -74,6 +82,10 @@ class CIFView(QWidget):
 
     def add_to_phase_diagram(self):
         self.add.emit([checkbox.isChecked() for checkbox in self.widget_ls])
+
+
+    def remove_from_phase_diagram(self):
+        self.remove.emit()
 
     def clear(self):
         for checkbox in self.widget_ls:

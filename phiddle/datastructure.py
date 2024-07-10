@@ -46,6 +46,19 @@ class LabelData():
                 if label.x_idx == x_idx:
                     label.phase = phase
 
+    def remove(self, sample_num, x_idx):
+        for idx, label in enumerate(self.labels):
+            if label.sample_num == sample_num and label.x_idx == x_idx:
+                del self.labels[idx]
+
+        if str(sample_num) in self.x_indices:
+            if x_idx in self.x_indices[str(sample_num)]:
+                self.x_indices[str(sample_num)].remove(x_idx)
+            if not self.x_indices[str(sample_num)]:
+                del self.x_indices[str(sample_num)]
+                self.sample_nums.remove(sample_num)
+
+
     def load_stored_label_data(self, data):
         if 'labels' not in data:
             return

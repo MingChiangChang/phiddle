@@ -25,8 +25,9 @@ from lattice_param_view import LatticeParamView, LatticeParamList
 from popup import Popup
 from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
-from datastructure import LabelData
 
+
+# TODO: Add remove phase label button
 
 class TopLevelWindow(QtWidgets.QMainWindow):
 
@@ -83,7 +84,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.globalview.picked.connect(self._update)
         self.cifview.checked.connect(self.update_sticks)
         self.cifview.add.connect(self.add_to_phase_diagram)
-        # self.slider.
+        self.cifview.remove.connect(self.remove_from_phase_diagram)
+
         self.phase_diagram_list.checked_signal.connect(self.update_pd_plot)  # FIXME
         self.phase_diagram_list.dim_change_signal.connect(self.phase_diagram_view.change_dim)
         self.phase_diagram_list.axes_signal.connect(self.phase_diagram_view.change_axes)
@@ -516,11 +518,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def add_to_phase_diagram(self, isChecked_list):
         phase_names = self.labeler.get_phase_names(isChecked_list)
-        if self.model.current_center in self.stripeview.get_selected_frames():
+        x_indices = self.stripeview.get_selected_frames()
+        if self.model.current_center in x_indices:
             self.model.add_to_phase_diagram(phase_names)
         temps = self.stripeview.selected_temperature
-        x_indices = self.stripeview.get_selected_frames()
-
 
         for t, x in zip(temps, x_indices):
             self.model.labeldata.update(t,
@@ -530,6 +531,21 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                   self.model.current_ind, 
                                   x)
 
+        labeled_indices = self.model.get_current_labeled_indices()
+        if labeled_indices:
+            self.stripeview.plot_label_progress(labeled_indices)
+
+
+    def remove_from_phase_diagram(self):
+        x_indices = self.stripeview.get_selected_frames()
+
+        if self.model.current_center in x_indices:
+            self.model.remove_from_phase_diagram()
+
+        for x in x_indices:
+            self.model.labeldata.remove(self.model.current_ind, x)
+
+        self.stripeview.replot_heatmap()
         labeled_indices = self.model.get_current_labeled_indices()
         if labeled_indices:
             self.stripeview.plot_label_progress(labeled_indices)

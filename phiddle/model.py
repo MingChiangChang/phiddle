@@ -168,6 +168,11 @@ class datamodel():
             self.df.at[self._ind, 'is_refined'] = False 
 
 
+    def remove_from_phase_diagram(self):
+        self.df.at[self._ind, 'phases'] = []
+        self.df.at[self._ind, 'is_refined'] = False 
+
+
     def update_phases(self, phases): 
         self.df['phases'] = phases
 

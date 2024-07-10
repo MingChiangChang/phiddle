@@ -387,6 +387,31 @@ class stripeview(FigureCanvasQTAgg):
 
         self.draw()
 
+    def replot_heatmap(self, xaxis=None, temp_profile_func=None):
+        if temp_profile_func is not None:
+            self.temp_profile_func = temp_profile_func
+        if xaxis is not None:
+            self.xaxis = xaxis
+
+        self.heatmap.clear()
+
+
+        (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
+        self.heatmap.imshow(self.data,
+                            extent=(self.xaxis[0], self.xaxis[-1], self.q[-1], self.q[0]),
+                            aspect = (self.xaxis[-1]-self.xaxis[0])/(self.q[-1]-self.q[0]))
+        self.heatmap.set_box_aspect(1)
+        self.title = self.get_title(t_left=self.t_left)
+        self.heatmap.set_title(self.title)
+        self.heatmap.set_xticks([])
+        self.heatmap.set_ylabel("q ($nm^{-1}$)")
+
+
+        self.aspan = self.heatmap.axvspan(
+            self.LeftX, self.RightX, color='k', alpha=0)
+        self.draw()
+
+
     def plot_label_progress(self, labeled_indices):
         height = self.q[-10]-self.q[-1] 
         start_width_ls = get_continue_patches(labeled_indices)
