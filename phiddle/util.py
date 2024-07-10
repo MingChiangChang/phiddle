@@ -12,6 +12,23 @@ def two_lorentz(height, x_0, sigma_1, sigma_2):
     return lambda x: ( lorentz(x, height, x_0, sigma_1)*(x<=x_0).astype(int)
                      + lorentz(x, height, x_0, sigma_2)*(x>x_0).astype(int) )
 
+def get_continue_patches(indices):
+    """ return [(start_0, width_0), (start_1, width_1), ...] """
+    start_width_ls = []
+    val = indices[0]
+    start_idx = 0
+    end_idx = 0
+    while end_idx < len(indices)-1:
+        end_idx += 1
+        val += 1
+        if indices[end_idx] != val:
+            start_width_ls.append((indices[start_idx], end_idx-start_idx))
+            start_idx = end_idx
+            val = indices[start_idx]
+    # Ending case
+    start_width_ls.append((indices[start_idx], end_idx-start_idx+1))
+    return start_width_ls
+
 
 def collect_data_and_q(h5, conds):
     q = []

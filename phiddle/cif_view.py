@@ -6,11 +6,16 @@ from PyQt6.QtWidgets import (
 #     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
 # from matplotlib.figure import Figure
 
+# TODO: 1. Instead of combo box, use a list that user can modify the order of 
+#          phases for convenience
+#       2. When user choosed the range with phase, autocheck the boxes for those
+#          phases and show cifs 
 
 class CIFView(QWidget):
 
     checked = pyqtSignal(list)
     add = pyqtSignal(list)
+    remove = pyqtSignal()
 
     def __init__(self, cif_list, parent=None):
 
@@ -19,29 +24,42 @@ class CIFView(QWidget):
         self.layout = QVBoxLayout()
 
         self.widget_ls = []
-        self.button = QPushButton()
-        self.button.setText("Add to phase diagram")
-        self.button.clicked.connect(self.add_to_phase_diagram)
+        self.add_button = QPushButton()
+        self.add_button.setText("Add to phase diagram")
+        self.add_button.clicked.connect(self.add_to_phase_diagram)
+
+        self.remove_button = QPushButton()
+        self.remove_button.setText("Remove from phase diagram")
+        self.remove_button.clicked.connect(self.remove_from_phase_diagram)
+
         for cif in cif_list:
             checkbox = QCheckBox(cif)
             checkbox.clicked.connect(self.update_stick_pattern)
             self.widget_ls.append(checkbox)
             self.layout.addWidget(checkbox)
+
         self.amorphous_checkbox = QCheckBox("Amorphous")
+        self.melt_checkbox = QCheckBox("Melt")
         # Should not let amorphous
         self.widget_ls.append(self.amorphous_checkbox)
+        self.widget_ls.append(self.melt_checkbox)
         self.layout.addWidget(self.amorphous_checkbox)  # Be hidden in the list
+        self.layout.addWidget(self.melt_checkbox)  # Be hidden in the list
 
-        self.layout.addWidget(self.button)
+        self.layout.addWidget(self.add_button)
+        self.layout.addWidget(self.remove_button)
         self.setLayout(self.layout)
 
     def update_cif_list(self, cif_list):
         """ Reuse checkboxes  """
-        self.layout.removeWidget(self.button)
+        self.layout.removeWidget(self.add_button)
+        self.layout.removeWidget(self.remove_button)
         self.layout.removeWidget(self.amorphous_checkbox)
+        self.layout.removeWidget(self.melt_checkbox)
         del self.widget_ls[-1]  # amorphous checkbox is always the last one
+        del self.widget_ls[-1]  # melt checkbox is second to last 
         for idx, cif in enumerate(cif_list):
-            if idx >= len(self.widget_ls):
+            if idx >= len(self.widget_ls): # Save 2 spots for Default options
                 checkbox = QCheckBox(cif)
                 checkbox.clicked.connect(self.update_stick_pattern)
                 self.widget_ls.append(checkbox)
@@ -57,16 +75,23 @@ class CIFView(QWidget):
             del self.widget_ls[-1]  # always remove the last one
 
         self.widget_ls.append(self.amorphous_checkbox)
+        self.widget_ls.append(self.melt_checkbox)
         self.layout.addWidget(self.amorphous_checkbox)
-        self.layout.addWidget(self.button)
+        self.layout.addWidget(self.melt_checkbox)
+        self.layout.addWidget(self.add_button)
+        self.layout.addWidget(self.remove_button)
         self.clear()
 
     def update_stick_pattern(self):
         self.checked.emit([checkbox.isChecked()
-                          for checkbox in self.widget_ls[:-1]])
+                          for checkbox in self.widget_ls[:-2]])
 
     def add_to_phase_diagram(self):
         self.add.emit([checkbox.isChecked() for checkbox in self.widget_ls])
+
+
+    def remove_from_phase_diagram(self):
+        self.remove.emit()
 
     def clear(self):
         for checkbox in self.widget_ls:
@@ -80,4 +105,4 @@ class CIFView(QWidget):
     def get_checked_phase_names(self):
         return [checkbox.text() for checkbox in self.widget_ls
                 if checkbox.isChecked()
-                if checkbox.text() != "Amorphous"]
+                if checkbox.text() != "Amorphous" and checkbox.text() != "Melt"]

@@ -6,8 +6,8 @@ import logging
 import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QWidget, QPushButton, QTabWidget, 
-    QHBoxLayout, QFileDialog, QMenu, QMessageBox
+    QVBoxLayout, QWidget, QPushButton, QTabWidget, QSizePolicy,
+    QHBoxLayout, QFileDialog, QMenu, QMessageBox, QSlider, QSpacerItem
 )
 from matplotlib.backends.backend_qtagg import (
     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
@@ -27,6 +27,8 @@ from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
 
 
+# TODO: Add remove phase label button
+
 class TopLevelWindow(QtWidgets.QMainWindow):
 
     def __init__(self,
@@ -40,21 +42,24 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.h5_path = h5_path
         self.csv_path = csv_path
         self.model = datamodel()
+        # self.labeldata = LabelData()
         self.labeler = labeler()
         self.cifview = CIFView([])
+        self.center_slider = QSlider(orientation=QtCore.Qt.Orientation.Horizontal)
+        # self.center_slider.setRange(0, 500)# setTickInterval(5)
+        self.center_slider.valueChanged.connect(self.user_moved_slider)
         self.popup = Popup()
+
+        # spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         # For testing
         if h5_path is not None and csv_path is not None:
             self.model.read_h5(h5_path)
             self.ind = 0
-            self.update(self.ind)
+            self._update(self.ind)
             self.labeler.read_csv(csv_path)
             self.cifview.update_cif_list(
                 [phase.name for phase in self.labeler.phases])
-
-        # self.keyboardwidget = KeyboardWidget()
-        # self.keyboardWidget.keyPressed.connect(self.key_pressed())
 
         self.phase_diagram_view = PhaseDiagramView()
         self.phase_diagram_list = PhaseDiagramList()
@@ -76,9 +81,11 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         lp_layout.setStretch(0, 3)
         lp_layout.setStretch(1, 1)
 
-        self.globalview.picked.connect(self.update)
+        self.globalview.picked.connect(self._update)
         self.cifview.checked.connect(self.update_sticks)
         self.cifview.add.connect(self.add_to_phase_diagram)
+        self.cifview.remove.connect(self.remove_from_phase_diagram)
+
         self.phase_diagram_list.checked_signal.connect(self.update_pd_plot)  # FIXME
         self.phase_diagram_list.dim_change_signal.connect(self.phase_diagram_view.change_dim)
         self.phase_diagram_list.axes_signal.connect(self.phase_diagram_view.change_axes)
@@ -116,6 +123,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         next_button.setText("Next")
         next_button.clicked.connect(lambda: self.change_ind(1))
 
+        set_center_button = QPushButton()
+        set_center_button.setText("Set Center") 
+        set_center_button.clicked.connect(self.set_center)
+
         labeler_setting_button = QPushButton()
         labeler_setting_button.setText("Labeler Settings")
         labeler_setting_button.clicked.connect(self.labeler_setting_clicked)
@@ -130,9 +141,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         next_label_result_button.clicked.connect(self.next_label_result)
 
         top_button_layout = QHBoxLayout()
-        top_button_layout.addWidget(labeler_setting_button)
-        top_button_layout.addWidget(previous_label_result_button)
-        top_button_layout.addWidget(next_label_result_button)
+        # top_button_layout.addSpacerItem(spacer)
+        top_button_layout.addWidget(self.center_slider, stretch=1)
+        top_button_layout.addWidget(set_center_button, stretch=1)
+        top_button_layout.addWidget(labeler_setting_button, stretch=1)
+        top_button_layout.addWidget(previous_label_result_button, stretch=1)
+        top_button_layout.addWidget(next_label_result_button, stretch=1)
 
         bottom_button_layout = QHBoxLayout()
         bottom_button_layout.addWidget(label_button)
@@ -194,8 +208,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         fileMenu.addAction(save_progress_act)
         fileMenu.addAction(load_progress_act)
 
-
-
         menuBar.addMenu(fileMenu)
         # Creating menus using a title
         editMenu = menuBar.addMenu(" &Edit")
@@ -216,11 +228,11 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 self.phase_diagram_list.update_combo_boxes()
                 self.lattice_param_list.update_axis_combo_boxes()
             self.ind = 0
-            # self.update(self.ind)
+            # self._update(self.ind)
         elif self.h5_path.endswith("udi"):
             self.model.read_udi(self.h5_path)
             self.ind = 0
-            self.update(self.ind) # FIXME: This should tell us how many dimension is allowed
+            self._update(self.ind) # FIXME: This should tell us how many dimension is allowed
 
     def browse_csv_button_clicked(self):
         self.csv_path, _ = QFileDialog.getOpenFileName(
@@ -251,7 +263,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self, 'Save File', "", "JSON Files (*.json)")
         if self.save_fn:
             storing_ds = {}
-            storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
+            # storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
+            storing_ds["full_phase_diagram"] = self.model.labeldata.serialize_data() #seralize_data()
+
             all_phases = self.model.get_all_phases()
             for phase in all_phases:
                 storing_ds[phase] = self.model.get_dict_for_lp_plot(phase) # FIXME: Load this as well
@@ -261,9 +275,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             with open(self.save_fn, 'w') as f:
                 json.dump(storing_ds, f)
 
+
     def load_progress_clicked(self):
-        self.load_fn, _ = QFileDialog.getOpenFileName(
-            None, "Open", "", "JSON Files (*.json)")
+        self.load_fn, _ = QFileDialog.getOpenFileName( None, "Open", "", "JSON Files (*.json)")
+
         if self.load_fn:
             with open(self.load_fn, 'r') as f:
                 load_meta_data = json.load(f)
@@ -286,16 +301,20 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 self.cifview.update_cif_list(
                     [phase.name for phase in self.labeler.phases])
                 self.model.update_phases(load_meta_data["phases"])
+                if "full_phase_diagram" in load_meta_data:
+                    self.model.labeldata.load_stored_label_data(load_meta_data["full_phase_diagram"])
+                else:
+                    self.model.clear_label_data()
                 self.ind = 0
             else:
-                self.logger.error(
-                    f'ERROR: File in .json not found! Check if you have moved you file around')
+                self.logger.error(f'ERROR: File in .json not found! Check if you have moved you file around')
+
 
     def labeler_setting_clicked(self):
         self.popup.set_default_text(*self.labeler.params)
         self.popup.show()
 
-    def update(self, ind):
+    def _update(self, ind):
         self.ind = ind
 
     def update_sticks(self, isChecked_list):
@@ -320,13 +339,44 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def update_pd_tab(self):
+        # TODO: have a combo box for full or center phase ploting
         phase_dict = self.model.get_dict_for_phase_diagram()
+        phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
+        cations = self.model.get_cations()
+
+        for phase in phase_dict_full:
+            if phase not in phase_dict:
+                phase_dict[phase] = {}
+                phase_dict[phase]['Dwell'] = []
+                phase_dict[phase]['Tpeak'] = []
+                for cation in cations:
+                    phase_dict[phase][cation] = []
+            phase_dict[phase]['Dwell'] += phase_dict_full[phase]['Dwell']
+            phase_dict[phase]['Tpeak'] += phase_dict_full[phase]['Tpeak']
+            for cation in cations:
+                phase_dict[phase][cation] += phase_dict_full[phase][cation]
+
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes())
         self.phase_diagram_list.show(list(phase_dict))
 
     def update_pd_plot(self, mask):
         phase_dict = self.model.get_dict_for_phase_diagram()
+        phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
+        cations = self.model.get_cations()
+
+        for phase in phase_dict_full:
+            if phase not in phase_dict:
+                phase_dict[phase] = {}
+                phase_dict[phase]['Dwell'] = []
+                phase_dict[phase]['Tpeak'] = []
+                for cation in cations:
+                    phase_dict[phase][cation] = []
+            phase_dict[phase]['Dwell'] += phase_dict_full[phase]['Dwell']
+            phase_dict[phase]['Tpeak'] += phase_dict_full[phase]['Tpeak']
+            for cation in cations:
+                phase_dict[phase][cation] += phase_dict_full[phase][cation]
+
         # FIXME: Bug after changing h5s
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
@@ -339,6 +389,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         phase_names = list(phase_dict)
         if "Amorphous" in phase_names:
             phase_names.remove("Amorphous")
+        if "Melt" in phase_names:
+            phase_names.remove("Melt")
         phase_names.insert(0, "")
         self.lattice_param_list.update_phase_combo_box(phase_names)
 
@@ -466,14 +518,47 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def add_to_phase_diagram(self, isChecked_list):
         phase_names = self.labeler.get_phase_names(isChecked_list)
-        self.model.add_to_phase_diagram(phase_names)
+        x_indices = self.stripeview.get_selected_frames()
+        if self.model.current_center in x_indices:
+            self.model.add_to_phase_diagram(phase_names)
+        temps = self.stripeview.selected_temperature
+
+        for t, x in zip(temps, x_indices):
+            self.model.labeldata.update(t,
+                                  self.model.current_dwell,
+                                  self.model.current_composition,
+                                  phase_names,
+                                  self.model.current_ind, 
+                                  x)
+
+        labeled_indices = self.model.get_current_labeled_indices()
+        if labeled_indices:
+            self.stripeview.plot_label_progress(labeled_indices)
+
+
+    def remove_from_phase_diagram(self):
+        x_indices = self.stripeview.get_selected_frames()
+
+        if self.model.current_center in x_indices:
+            self.model.remove_from_phase_diagram()
+
+        for x in x_indices:
+            self.model.labeldata.remove(self.model.current_ind, x)
+
+        self.stripeview.replot_heatmap()
+        labeled_indices = self.model.get_current_labeled_indices()
+        if labeled_indices:
+            self.stripeview.plot_label_progress(labeled_indices)
 
 
     def update_params(self, std_noise, mean, std, max_phase,
                       expand_degree, background_length, max_iter, optimize_mode, background_option, year):
         self.labeler.set_hyperparams(std_noise, mean, std, max_phase, expand_degree, background_length,
                                         max_iter, optimize_mode, background_option)
-        self.stripeview.set_temp_profile_params_by_year(year)
+        self.model.set_temp_profile_params_by_year(year)
+        xaxis, temp_profile_func = self.model.get_current_temp_profile()
+        self.stripeview.replot_w_new_center(xaxis, temp_profile_func)
+         
 
 
     def next_label_result(self):
@@ -516,6 +601,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     @ind.setter
     def ind(self, new_ind):
+        # All the update and setups that has to be done when switching samples is in there
+        # A little bit too hidden
         if new_ind >= self.model.size:
             new_ind = 0
         elif new_ind < 0:
@@ -526,9 +613,21 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.stripeview.avg_pattern = None  # Not good
         self.stripeview.clear_figures()
+        xaxis, temp_profile_func = self.model.get_current_temp_profile()
+
+        xlabel = self.model.get_stripe_xlabel()
         self.stripeview.plot_new_data(
             self.model.current_data,
-            self.model.current_xx)
+            xaxis=xaxis, #self.model.current_xx,
+            temp_profile_func = temp_profile_func, xlabel=xlabel, xx = self.model.current_xx)
+
+        labeled_indices = self.model.get_current_labeled_indices()
+        if labeled_indices:
+            self.stripeview.plot_label_progress(labeled_indices)
+
+        self.center_slider.setRange(0, len(xaxis)-1)
+        self.center_slider.setValue(int((len(xaxis)-1)/2))
+
         self.globalview.clear_figures()
         self.globalview.plot(
             self.model.df['Dwell'],
@@ -547,6 +646,17 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 self.cifview.check_boxes(existing_phase_ind)
         except AttributeError:
             pass
+
+    def user_moved_slider(self, value):
+        self.stripeview.slider_moveto(value) 
+        # self.stripeview.update_temp_profile(value)
+
+    def set_center(self):
+        c = self.stripeview.transform_x_to_data_idx(self.center_slider.value())
+        self.model.set_current_center(c)
+        xaxis = self.model.get_current_xaxis()
+        self.stripeview.replot_w_new_center(xaxis)
+        self.model.update_temp_profile_for_stored_labels() 
 
     def closeEvent(self, event):
         # Ask for confirmation before closing
