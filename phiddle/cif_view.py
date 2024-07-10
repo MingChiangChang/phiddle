@@ -6,6 +6,10 @@ from PyQt6.QtWidgets import (
 #     FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
 # from matplotlib.figure import Figure
 
+# TODO: 1. Instead of combo box, use a list that user can modify the order of 
+#          phases for convenience
+#       2. When user choosed the range with phase, autocheck the boxes for those
+#          phases and show cifs 
 
 class CIFView(QWidget):
 
@@ -27,11 +31,13 @@ class CIFView(QWidget):
         self.remove_button = QPushButton()
         self.remove_button.setText("Remove from phase diagram")
         self.remove_button.clicked.connect(self.remove_from_phase_diagram)
+
         for cif in cif_list:
             checkbox = QCheckBox(cif)
             checkbox.clicked.connect(self.update_stick_pattern)
             self.widget_ls.append(checkbox)
             self.layout.addWidget(checkbox)
+
         self.amorphous_checkbox = QCheckBox("Amorphous")
         self.melt_checkbox = QCheckBox("Melt")
         # Should not let amorphous
