@@ -88,6 +88,7 @@ class datamodel():
 
         self.current_dwell, self.current_tpeak = get_condition(self.conds[self._ind])
         self.df = pd.DataFrame(self.df_data)
+        self.labeldata = LabelData()
 
     def clear_label_data(self):
         self.labeldata = LabelData()
