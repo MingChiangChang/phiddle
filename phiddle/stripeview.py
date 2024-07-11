@@ -311,7 +311,7 @@ class stripeview(FigureCanvasQTAgg):
 
     def slider_moveto(self, data_idx_value):
         x = self.xaxis[data_idx_value]
-        self.temp_selection_box.set_xdata(x)
+        self.temp_selection_box.set_xdata([x])
         self.RightX = x
         self.LeftX = x
         self.selection_box.set_xdata(self.x)
