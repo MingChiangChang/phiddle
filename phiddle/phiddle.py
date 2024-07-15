@@ -28,7 +28,7 @@ from center_finder_asym import get_center_asym
 
 
 # TODO: Add remove phase label button
-
+#       Are user defined center stored?
 class TopLevelWindow(QtWidgets.QMainWindow):
 
     def __init__(self,
@@ -265,6 +265,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             storing_ds = {}
             # storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
             storing_ds["full_phase_diagram"] = self.model.labeldata.serialize_data() #seralize_data()
+            storing_ds["center_idx"] = self.model.get_center_idx()
+            print(storing_ds["center_idx"])
+            print(type(storing_ds["center_idx"][0]))
 
             all_phases = self.model.get_all_phases()
             for phase in all_phases:
@@ -272,6 +275,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             storing_ds["phases"] = self.model.get_phases()
             storing_ds["csv_path"] = os.path.abspath(self.csv_path) if self.csv_path else ""
             storing_ds["h5_path"] = os.path.abspath(self.h5_path) if self.h5_path else ""
+
             with open(self.save_fn, 'w') as f:
                 json.dump(storing_ds, f)
 
@@ -305,6 +309,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                     self.model.labeldata.load_stored_label_data(load_meta_data["full_phase_diagram"])
                 else:
                     self.model.clear_label_data()
+                if "center_idx" in load_meta_data:
+                    self.model.load_center_idx(load_meta_data["center_idx"])
                 self.ind = 0
             else:
                 self.logger.error(f'ERROR: File in .json not found! Check if you have moved you file around')
@@ -657,6 +663,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         xaxis = self.model.get_current_xaxis()
         self.stripeview.replot_w_new_center(xaxis)
         self.model.update_temp_profile_for_stored_labels() 
+
+        labeled_indices = self.model.get_current_labeled_indices()
+        if labeled_indices:
+            self.stripeview.plot_label_progress(labeled_indices)
 
     def closeEvent(self, event):
         # Ask for confirmation before closing

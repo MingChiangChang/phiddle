@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 
@@ -29,6 +31,16 @@ def get_continue_patches(indices):
     start_width_ls.append((indices[start_idx], end_idx-start_idx+1))
     return start_width_ls
 
+
+def replace_nan_w_None(ls):
+    a = []
+    for i in ls:
+        if math.isnan(i):
+            a.append(None)
+        else:
+            a.append(i)
+
+     
 
 def collect_data_and_q(h5, conds):
     q = []

@@ -355,7 +355,7 @@ class stripeview(FigureCanvasQTAgg):
     def replot_w_new_center(self, xaxis, temp_profile_func=None):
         if temp_profile_func is not None:
             self.temp_profile_func = temp_profile_func
-        self.heatmap.clear()
+        self.heatmap.clear() # TODO: probably don't need to replot the heat map
         self.temp_profile.clear()
         self.xaxis = xaxis
         (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')

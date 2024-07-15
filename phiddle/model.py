@@ -335,6 +335,22 @@ class datamodel():
         if self.current_xx is None: return "Index"
         return "Location (um)"
 
+    def get_center_idx(self):
+        center =  self.df['center_idx'].tolist()
+        rc = []
+        for c in center:
+            if c is not None:
+                rc.append(int(c))
+            else:
+                rc.append(None)
+        return rc
+
+    def load_center_idx(self, center_idx):
+        self.df['center_idx'] = [None for _ in range(self.size)]
+        for i, center in enumerate(center_idx):
+            if center is not None:
+                self.df.at[i, "center_idx"] = center
+
     @property
     def current_center(self):
         return self.df['center_idx'][self.ind]
