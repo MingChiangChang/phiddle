@@ -11,6 +11,7 @@ from util import collect_data_and_q, collect_conditions, collect_positions, get_
 from datastructure import LabelData
 
 
+# TODO: Storing refined lp
 class datamodel():
 
     def __init__(self):
@@ -120,6 +121,8 @@ class datamodel():
         if int(year) == 2023:
             self.left_right_width = left_right_width_2023
             return
+        if int(year) == 2021:
+            pass
         print("Year specified does not exist. This shouldn't happen.",
               "Please contact Ming!")
 
@@ -267,42 +270,8 @@ class datamodel():
         for label in self.labeldata:
             if label.sample_num == self.current_ind:
                 label.tpeak = self.temp_func(np.array(self.transform_data_idx_to_x(label.x_idx)))
-
-        # print(self.labeldata.sample_nums)
-        # sns = [i for i, sample_num in enumerate(self.labeldata.sample_nums) if sample_num == self.current_ind]
-        # for i, sn in enumerate(sns):
-        #     x_ind = self.labeldata.x_indices[str(sn)]
-        #     x_pos = self.transform_data_idx_to_x(np.array(x_ind))
-
         
 
-    @property
-    def current_ind(self):
-        return self._ind
-
-    @property
-    def labeled(self):
-        return [bool(phase) for phase in self.df['phases']]
-
-
-    @property
-    def current(self):
-        tmp = np.zeros(len(self.df))
-        tmp[self.ind] = 1
-        tmp = tmp.astype(bool)
-        return tmp
-
-
-    @property
-    def current_data(self):
-        return self.__getitem__(self.ind)
-
-
-    @property
-    def current_xx(self):
-        if 'xx' in self.df:
-            return self.df['xx'][self.ind]
-        return None
 
     def get_current_temp_profile(self):
         left_width, right_width = self.left_right_width(self.current_dwell, self.current_tpeak)
@@ -315,6 +284,19 @@ class datamodel():
         self.xaxis = xaxis           
         self.temp_func = temp_func           
         return xaxis, temp_func
+
+    def get_current_phases_bw_x_range(self, x_min_ind, x_max_ind):
+        phases = set()
+        x_range = range(x_min_ind, x_max_ind+1)
+        if self.df['center_idx'][self.ind] in x_range:
+            for phase in self.df['phases'][self.ind]:
+                phases.add(phase)
+        for x_idx in x_range:
+            phase_names = self.labeldata.get_phase(self.ind, x_idx)
+            if phase_names is not None:
+                for phase_name in phase_names:
+                    phases.add(phase_name)
+        return list(phases)
 
     def get_current_xaxis(self):
         if self.current_xx is not None:
@@ -350,6 +332,34 @@ class datamodel():
         for i, center in enumerate(center_idx):
             if center is not None:
                 self.df.at[i, "center_idx"] = center
+
+    @property
+    def current_ind(self):
+        return self._ind
+
+    @property
+    def labeled(self):
+        return [bool(phase) for phase in self.df['phases']]
+
+
+    @property
+    def current(self):
+        tmp = np.zeros(len(self.df))
+        tmp[self.ind] = 1
+        tmp = tmp.astype(bool)
+        return tmp
+
+
+    @property
+    def current_data(self):
+        return self.__getitem__(self.ind)
+
+
+    @property
+    def current_xx(self):
+        if 'xx' in self.df:
+            return self.df['xx'][self.ind]
+        return None
 
     @property
     def current_center(self):

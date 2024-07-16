@@ -27,8 +27,6 @@ from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
 
 
-# TODO: Add remove phase label button
-#       Are user defined center stored?
 class TopLevelWindow(QtWidgets.QMainWindow):
 
     def __init__(self,
@@ -42,11 +40,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.h5_path = h5_path
         self.csv_path = csv_path
         self.model = datamodel()
-        # self.labeldata = LabelData()
         self.labeler = labeler()
         self.cifview = CIFView([])
         self.center_slider = QSlider(orientation=QtCore.Qt.Orientation.Horizontal)
-        # self.center_slider.setRange(0, 500)# setTickInterval(5)
         self.center_slider.valueChanged.connect(self.user_moved_slider)
         self.popup = Popup()
 
@@ -85,6 +81,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.cifview.checked.connect(self.update_sticks)
         self.cifview.add.connect(self.add_to_phase_diagram)
         self.cifview.remove.connect(self.remove_from_phase_diagram)
+        self.stripeview.heatmap_release.connect(self.update_checked_cif_list)
 
         self.phase_diagram_list.checked_signal.connect(self.update_pd_plot)  # FIXME
         self.phase_diagram_list.dim_change_signal.connect(self.phase_diagram_view.change_dim)
@@ -565,6 +562,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         xaxis, temp_profile_func = self.model.get_current_temp_profile()
         self.stripeview.replot_w_new_center(xaxis, temp_profile_func)
          
+    def update_checked_cif_list(self, x_min_ind, x_max_ind):
+        phases = self.model.get_current_phases_bw_x_range(x_min_ind, x_max_ind+1)
+        self.cifview.set_checked_phase_names(phases)
 
 
     def next_label_result(self):

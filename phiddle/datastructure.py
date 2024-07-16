@@ -113,4 +113,27 @@ class LabelData():
                 all_phases.add(phase)
         return all_phases
 
+    def get_phase(self, n_sample, x_idx):
+        """ O(nm) if there is n labels and m queries"""
+        if not n_sample in self.sample_nums:
+            return
 
+        for label in self.labels:
+            if label.sample_num == n_sample:
+                if label.x_idx == x_idx:
+                    return label.phase 
+        return 
+
+
+    def get_phase_in_x_range(self, n_sample, x_range):
+        """ O(n) regardless of x range size """
+        rp = set()
+        if not n_sample in self.sample_nums:
+            return rp
+
+        for label in self.labels:
+            if label.sample_num == n_sample:
+                if label.x_idx in x_range:
+                    for p in label.phase:
+                        rp.add(p)
+        return rp

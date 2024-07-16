@@ -1,19 +1,18 @@
 import numpy as np
-from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
-    QCheckBox, QFileDialog, QComboBox, QHBoxLayout, QLabel
+    QVBoxLayout, QWidget, QPushButton, QCheckBox, QFileDialog,
+    QComboBox, QHBoxLayout, QLabel
 )
-from matplotlib.backends.backend_qtagg import (
-    FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar, )
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
 from util import COLORS
 
 # FIXME: Always read phases before plotting
+# TODO: Add select all phase checkbox
+# TODO: Allow user to choose volume plot and simplex phase regions
 class PhaseDiagramView(FigureCanvasQTAgg):
 
     def __init__(self, parent=None, xlim=(250, 10000), ylim=(400, 1400)):

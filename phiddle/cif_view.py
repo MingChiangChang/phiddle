@@ -106,3 +106,11 @@ class CIFView(QWidget):
         return [checkbox.text() for checkbox in self.widget_ls
                 if checkbox.isChecked()
                 if checkbox.text() != "Amorphous" and checkbox.text() != "Melt"]
+
+    def set_checked_phase_names(self, phase_names):
+        for checkbox in self.widget_ls:
+            if checkbox.text() in phase_names:
+                checkbox.setChecked(True)
+            else:
+                checkbox.setChecked(False)
+

@@ -7,6 +7,7 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 import matplotlib.lines as mlines
+from PyQt6.QtCore import pyqtSignal
 
 from util import (minmax_norm, minmax_denorm, COLORS, find_first_larger,
                   get_continue_patches, find_first_smaller)
@@ -16,7 +17,12 @@ from pyPhaseLabel import evaluate_obj
 # TODO: This need major refactoring and abstraction
 #       1. Remove repetitive code in stripeview to make clear API
 #       2. Model should use emit so view controller has less thing to do
+# TODO: Right click after selecting range should show the full range
+# TODO: when adding new cifs, stick pattern replots in full range instead of selected range
+# TODO: Allow vmin vmax selection in heatmap (slide bar?)
 class stripeview(FigureCanvasQTAgg):
+
+    heatmap_release = pyqtSignal(int, int)
 
     def __init__(self, parent=None):
         fig = Figure()
@@ -50,7 +56,7 @@ class stripeview(FigureCanvasQTAgg):
 
         self.fit_result = None
 
-
+    ######## Getters ########
     @property
     def x(self):
         return np.array([self.LeftX,
@@ -84,15 +90,21 @@ class stripeview(FigureCanvasQTAgg):
                          self.spectra_right_x,
                          self.spectra_left_x])
 
-    def get_selected_frames(self):
-        return range(self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX)),
-                     self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))+1)
 
     @property
     def selected_temperature(self):
         r = self.get_selected_frames()
         x_pos = list(map(self.transform_data_idx_to_x, r))
         return self.temp_profile_func(np.array(x_pos))
+
+    ###### END Getters ######
+
+
+    def get_selected_frames(self):
+        """ Includes the starting and ending frames """
+        return range(self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX)),
+                     self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))+1)
+
 
 
     def move(self, move_idx):
@@ -161,6 +173,7 @@ class stripeview(FigureCanvasQTAgg):
         self.spectra.set_ylabel("Avg intensity (a.u.)")
         self.spectra.legend(fontsize=7, loc="upper right")
         self.draw()
+        self.heatmap_release.emit(self.x_min_ind, self.x_max_ind)
 
 
     def onclick(self, event):
@@ -178,6 +191,7 @@ class stripeview(FigureCanvasQTAgg):
                 pass
 
             self.moving = True
+
         elif event.inaxes in [self.spectra]:
 
             self._clicked_x = event.x
@@ -193,6 +207,7 @@ class stripeview(FigureCanvasQTAgg):
 
 
     def onrelease(self, event):
+        # TODO: auto check phases that are within selected range
 
         if ((event.inaxes in [self.spectra])  # Detect moveless right clicks 
                 and (event.button is MouseButton.RIGHT)
@@ -284,6 +299,7 @@ class stripeview(FigureCanvasQTAgg):
             self.spectra.set_ylabel("Avg intensity (a.u.)")
             self.spectra.legend(fontsize=7, loc="upper right")
             self.draw()
+            self.heatmap_release.emit(self.x_min_ind, self.x_max_ind)
 
     def onmotion(self, event):
         if not self.moving:
