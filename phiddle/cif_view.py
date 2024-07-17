@@ -7,9 +7,7 @@ from PyQt6.QtWidgets import (
 # from matplotlib.figure import Figure
 
 # TODO: 1. Instead of combo box, use a list that user can modify the order of 
-#          phases for convenience
-#       2. When user choosed the range with phase, autocheck the boxes for those
-#          phases and show cifs 
+#          phases for convenience (QListWidget is a little bit difficult to use)
 
 class CIFView(QWidget):
 

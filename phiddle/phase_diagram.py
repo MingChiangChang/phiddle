@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtWidgets import (
     QVBoxLayout, QWidget, QPushButton, QCheckBox, QFileDialog,
     QComboBox, QHBoxLayout, QLabel
@@ -13,6 +13,7 @@ from util import COLORS
 # FIXME: Always read phases before plotting
 # TODO: Add select all phase checkbox
 # TODO: Allow user to choose volume plot and simplex phase regions
+# TODO: Always put amorphous and melt at the buttom and sort the phase names 
 class PhaseDiagramView(FigureCanvasQTAgg):
 
     def __init__(self, parent=None, xlim=(250, 10000), ylim=(400, 1400)):
@@ -266,14 +267,27 @@ class PhaseDiagramList(QWidget):
         self.outer_layout.addLayout(self.axis2_layout)
         self.outer_layout.addLayout(self.axis3_layout)
 
+        self.check_all_box = QCheckBox("Select All")
+        self.check_all_box.setCheckState(Qt.CheckState.Checked)
+        self.check_all_box.stateChanged.connect(self.select_all)
+
         self.axis3_label.hide()
         self.axis3_selection_box.hide()
 
         self.outer_layout.addLayout(self.layout)
+        self.outer_layout.addWidget(self.check_all_box)
         self.outer_layout.addWidget(self.save_button)
         self.setLayout(self.outer_layout)
 
-
+    def select_all(self, check_state_int):
+        if check_state_int == 2:
+            for w in self.widget_ls:
+                w.setCheckState(Qt.CheckState.Checked)
+        else:
+            for w in self.widget_ls:
+                w.setCheckState(Qt.CheckState.Unchecked)
+        self.update_phase_diagram()
+ 
     def update_combo_boxes(self):
         option_ls = self.get_option_ls()
         self.update_combo_box(self.axis1_selection_box, option_ls)
@@ -305,19 +319,27 @@ class PhaseDiagramList(QWidget):
 
     def show(self, phases):
 
-        for idx, phase in enumerate(phases):
+        ordered_phase = phases #[]
+        # if "Amorphous" in phases:
+        #     ordered_phase.append("Amorphous")
+        #     phases.remove("Amorphous")
+        # if "Melt" in phases:
+        #     ordered_phase.append("Melt")
+        #     phases.remove("Melt")
+        # ordered_phase = sorted(phases) + ordered_phase
+        for idx, phase in enumerate(ordered_phase):
             if idx >= len(self.widget_ls):
                 checkbox = QCheckBox(phase)
+                checkbox.setChecked(True)
                 checkbox.clicked.connect(self.update_phase_diagram)
                 self.widget_ls.append(checkbox)
                 self.layout.addWidget(checkbox)
             else:
                 checkbox = self.widget_ls[idx]
                 checkbox.setText(phase)
-            checkbox.setChecked(True)
 
-        if len(phases) > len(self.widget_ls):
-            for i in range(len(phase), len(self.widget_ls)):
+        if len(ordered_phase) > len(self.widget_ls):
+            for i in range(len(ordered_phase), len(self.widget_ls)):
                 self.layout.removeWidget(self.widget_ls[i])
                 del self.widget_ls[i]
 
