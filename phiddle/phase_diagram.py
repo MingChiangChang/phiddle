@@ -32,13 +32,13 @@ class PhaseDiagramView(FigureCanvasQTAgg):
         self.phase_dict = {} # Purposely use stateful widget to separate the weight from main view manager
         # self.draw()
 
-    def plot(self, phase_dict, axes = ["Dwell", "Tpeak"] , mask=None):
+    def plot(self, phase_dict, axes = ["Dwell", "Tpeak"] , phase_list=None):
 
         self.phase_dict = phase_dict
         phase_name_ls = np.array(list(phase_dict))
-        if mask:
-            others = phase_name_ls[np.logical_not(mask)]
-            phase_name_ls = phase_name_ls[mask]
+        if phase_list is not None:
+            others = [p for p in phase_name_ls if p not in phase_list]
+            phase_name_ls = phase_list 
 
         if self.dim == 2:
             if self.fig.axes:
@@ -55,7 +55,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                                            label=phase,
                                            color=COLORS[((idx+1) % len(COLORS)-1)],
                                            alpha=0.5)
-            if mask:
+            if phase_list is not None:
                 for idx, phase in enumerate(others):
                     self.phase_diagram.scatter(phase_dict[phase][axes[0]],
                                                phase_dict[phase][axes[1]],
@@ -109,7 +109,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                                            color=COLORS[((idx+1) % len(COLORS)-1)],
                                            s=50,
                                            alpha=0.5)
-            if mask:
+            if phase_list is not None:
                 for idx, phase in enumerate(others):
                     self.phase_diagram.scatter(transform[0](phase_dict[phase][axes[0]]),
                                                transform[1](phase_dict[phase][axes[1]]),
@@ -319,14 +319,15 @@ class PhaseDiagramList(QWidget):
 
     def show(self, phases):
 
-        ordered_phase = phases #[]
-        # if "Amorphous" in phases:
-        #     ordered_phase.append("Amorphous")
-        #     phases.remove("Amorphous")
-        # if "Melt" in phases:
-        #     ordered_phase.append("Melt")
-        #     phases.remove("Melt")
-        # ordered_phase = sorted(phases) + ordered_phase
+        ordered_phase = []
+        if "Amorphous" in phases:
+            ordered_phase.append("Amorphous")
+            phases.remove("Amorphous")
+        if "Melt" in phases:
+            ordered_phase.append("Melt")
+            phases.remove("Melt")
+        ordered_phase = sorted(phases) + ordered_phase
+
         for idx, phase in enumerate(ordered_phase):
             if idx >= len(self.widget_ls):
                 checkbox = QCheckBox(phase)
@@ -345,8 +346,11 @@ class PhaseDiagramList(QWidget):
 
 
     def update_phase_diagram(self):
-        self.checked_signal.emit([checkbox.isChecked()
-                          for checkbox in self.widget_ls])
+        # self.checked_signal.emit([checkbox.isChecked()
+        #                   for checkbox in self.widget_ls])
+
+        self.checked_signal.emit([checkbox.text()
+                          for checkbox in self.widget_ls if checkbox.isChecked()])
 
 
     def dim_changed(self):

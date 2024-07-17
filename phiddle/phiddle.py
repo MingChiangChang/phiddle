@@ -263,8 +263,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             # storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
             storing_ds["full_phase_diagram"] = self.model.labeldata.serialize_data() #seralize_data()
             storing_ds["center_idx"] = self.model.get_center_idx()
-            print(storing_ds["center_idx"])
-            print(type(storing_ds["center_idx"][0]))
 
             all_phases = self.model.get_all_phases()
             for phase in all_phases:
@@ -363,7 +361,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                      self.phase_diagram_list.get_current_axes())
         self.phase_diagram_list.show(list(phase_dict))
 
-    def update_pd_plot(self, mask):
+    def update_pd_plot(self, phase_list):
         phase_dict = self.model.get_dict_for_phase_diagram()
         phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
         cations = self.model.get_cations()
@@ -383,7 +381,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         # FIXME: Bug after changing h5s
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
-                                     mask)
+                                     phase_list)
 
     def update_lp_tab(self):
         phase_dict = self.model.get_dict_for_phase_diagram()
