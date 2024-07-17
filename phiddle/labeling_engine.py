@@ -22,7 +22,7 @@ class labeler():
         self.max_phase = 1
         self.expand_k = 2
         self.use_background = False
-        self.background_option = "MCBL" # FIXME: using MCBL leads to bad activation
+        self.background_option = "MCBL"
         self.optimize_mode = "Simple"
         self.background_length = 8.
         self.max_iter = 512
@@ -204,15 +204,6 @@ class labeler():
                 self.results[self.label_ind],
                 get_fraction(self.results[self.label_ind].CPs),
                 self.bg)
-
-    def get_phase_names(self, isChecked_ls): # TODO: Shouldn't this be in cif view?
-        phase_names = [self.phases[idx].name for idx,
-                       check in enumerate(isChecked_ls[:-2]) if check]
-        if isChecked_ls[-2]:
-            phase_names.append("Amorphous")
-        if isChecked_ls[-1]:
-            phase_names.append("Melt")
-        return phase_names
 
     @property
     def params(self):

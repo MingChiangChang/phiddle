@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 import json
 import logging
 
@@ -26,6 +27,7 @@ from popup import Popup
 from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
 
+# TODO: Better error handling, mostly for loading file
 
 class TopLevelWindow(QtWidgets.QMainWindow):
 
@@ -276,6 +278,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def load_progress_clicked(self):
+        # TODO: All load/browse button, if run successfully, should be updating all tabs
         self.load_fn, _ = QFileDialog.getOpenFileName( None, "Open", "", "JSON Files (*.json)")
 
         if self.load_fn:
@@ -358,7 +361,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 phase_dict[phase][cation] += phase_dict_full[phase][cation]
 
         self.phase_diagram_view.plot(phase_dict,
-                                     self.phase_diagram_list.get_current_axes())
+                                     self.phase_diagram_list.get_current_axes(), [])
         self.phase_diagram_list.show(list(phase_dict))
 
     def update_pd_plot(self, phase_list):
@@ -517,8 +520,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.ind += change
 
 
-    def add_to_phase_diagram(self, isChecked_list):
-        phase_names = self.labeler.get_phase_names(isChecked_list)
+    def add_to_phase_diagram(self, phase_names):
         x_indices = self.stripeview.get_selected_frames()
         if self.model.current_center in x_indices:
             self.model.add_to_phase_diagram(phase_names)
@@ -690,9 +692,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         if  event.text() == 'D':
             self.change_ind(1); return
 
+def error_handler(etype, value, tb):
+    error_msg = ''.join(traceback.format_exception(etype, value, tb))
+    print(error_msg)
 
 
 if __name__ == "__main__":
+    sys.excepthook = error_handler # This should be able to catch all exceptions
     app = QtWidgets.QApplication(sys.argv)
 
     w = 1920

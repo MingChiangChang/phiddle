@@ -27,7 +27,7 @@ class datamodel():
         self.df_data['y'] = [0]
         self.df_data['fracs'] = [0]
         self.df_data['cation'] = [""]
-        self.df_data["phases"] = [[] for _ in range(self.size)] # TODO: Now this always stores the phases labeled last, instead store only the one at the center
+        self.df_data["phases"] = [[] for _ in range(self.size)]
         self.df_data["refined_lps"] = [[] for _ in range(self.size)]
         self.df_data["refined_lps_uncer"] = [[] for _ in range(self.size)] 
         self.df_data["act"] = [[] for _ in range(self.size)]

@@ -11,9 +11,8 @@ import matplotlib.ticker as mticker
 from util import COLORS
 
 # FIXME: Always read phases before plotting
-# TODO: Add select all phase checkbox
 # TODO: Allow user to choose volume plot and simplex phase regions
-# TODO: Always put amorphous and melt at the buttom and sort the phase names 
+
 class PhaseDiagramView(FigureCanvasQTAgg):
 
     def __init__(self, parent=None, xlim=(250, 10000), ylim=(400, 1400)):
@@ -268,7 +267,7 @@ class PhaseDiagramList(QWidget):
         self.outer_layout.addLayout(self.axis3_layout)
 
         self.check_all_box = QCheckBox("Select All")
-        self.check_all_box.setCheckState(Qt.CheckState.Checked)
+        # self.check_all_box.setCheckState(Qt.CheckState.Checked)
         self.check_all_box.stateChanged.connect(self.select_all)
 
         self.axis3_label.hide()
@@ -331,7 +330,7 @@ class PhaseDiagramList(QWidget):
         for idx, phase in enumerate(ordered_phase):
             if idx >= len(self.widget_ls):
                 checkbox = QCheckBox(phase)
-                checkbox.setChecked(True)
+                # checkbox.setChecked(True)
                 checkbox.clicked.connect(self.update_phase_diagram)
                 self.widget_ls.append(checkbox)
                 self.layout.addWidget(checkbox)
@@ -339,10 +338,10 @@ class PhaseDiagramList(QWidget):
                 checkbox = self.widget_ls[idx]
                 checkbox.setText(phase)
 
-        if len(ordered_phase) > len(self.widget_ls):
+        if len(self.widget_ls) > len(ordered_phase):
             for i in range(len(ordered_phase), len(self.widget_ls)):
-                self.layout.removeWidget(self.widget_ls[i])
-                del self.widget_ls[i]
+                self.layout.removeWidget(self.widget_ls[-1])
+                del self.widget_ls[-1]
 
 
     def update_phase_diagram(self):

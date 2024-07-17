@@ -85,7 +85,7 @@ class CIFView(QWidget):
                           for checkbox in self.widget_ls[:-2]])
 
     def add_to_phase_diagram(self):
-        self.add.emit([checkbox.isChecked() for checkbox in self.widget_ls])
+        self.add.emit([checkbox.text() for checkbox in self.widget_ls if checkbox.isChecked()])
 
 
     def remove_from_phase_diagram(self):
