@@ -1,9 +1,22 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.optimize import leastsq
+from util import two_lorentz, oned_gaussian_func
 
 #Version 1.2, used since Feb 7 2024 at 21:24
 
+temperature_profile_func_dict = {
+        "2024": lambda dwell, tpeak: two_lorentz(tpeak, 0., *left_right_width_2024(dwell, tpeak)), 
+        "2023": lambda dwell, tpeak: two_lorentz(tpeak, 0., *left_right_width_2023(dwell, tpeak)),
+        "2021": lambda dwell, tpeak: oned_gaussian_func(tpeak, 0.,
+                                      sigma_Fall2021(dwell, LaserPowerMing_Fall2021(dwell, tpeak)))
+        }
+
+width_func_dict = {
+        "2024": lambda dwell, tpeak: left_right_width_2024(dwell, tpeak), 
+        "2023": lambda dwell, tpeak: left_right_width_2023(dwell, tpeak),
+        "2021": lambda dwell, tpeak: sigma_Fall2021(dwell, LaserPowerMing_Fall2021(dwell, tpeak))
+        }
 def temp_surface_func(b, c, d, e, f):
     return lambda x, y: (b*x+c)*(y)**(d*x**2+e*x+f) + 27
 
@@ -15,6 +28,7 @@ def twod_surface(base, a, b, c, d, e):
 
 def cubic_surface(base, a, b, c, d, e, f, g):
     return lambda x, y: base + a*x + b*y + c*x**2 + d*y**2 + e*x*y + f*x**4 + g*y**4
+
 
 ########### Year 2023 #################
 def left_right_width_2023(tau, Temp):
@@ -90,6 +104,41 @@ def LaserPowerMing_Spring2024(dwell, Tpeak, temp_fit = None):
     return power
 
 ########### End of Year 2024 #################
+
+########### Year 2021 #############
+def LaserPowerMing_Fall2021(tau, Temp):
+    """
+    Ming's new power profile
+    tau in us, Temp in C
+    Power is in units of Amps!!!
+    """
+    tpeak = Temp
+    dwell = np.log10(tau)
+    n_sqrt = 0.0190715357103267*dwell**4 - 0.180649351400508*dwell**3 + 0.651605603621984*dwell**2 + 5.21414120166499e-5*dwell*tpeak - dwell - 0.000206391126900198*tpeak + 0.569129395966527
+    if n_sqrt >= 0.:
+        P = (-6.40883896736885e+15*dwell**2 + 3.78789311741561e+16*dwell + 4.64073240375504e+16*np.sqrt(n_sqrt) - 7.48733837342515e+16)/(112293816201517.0*dwell - 444492129640718.0)
+    else:
+        print("Requested power cannot be reached!")
+        P = 1.e10
+    if np.isnan(P) or P < 0.:
+        print("Requested power cannot be reached! Exiting now!")
+        P = 1.e10
+    print("Current:", P)
+    return P
+
+def sigma_Fall2021(tau, current):
+    """ 
+    Will return the sigma given a dwell in log10(tau) and current in Amps
+    """ 
+    dwell = np.log10(tau)
+    return  [(6.70640332e+02 
+            - 2.22189018e+02*dwell
+            - 2.27743561e+00*current
+            + 3.02469331e+01*dwell**2
+            + 7.70978201e-03*current**2
+            +1.70903683e-01*dwell*current)]
+
+########## End of Year 2021 #########
 
 if __name__ == '__main__':
     pass

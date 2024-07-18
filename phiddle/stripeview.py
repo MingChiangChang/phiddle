@@ -1,6 +1,8 @@
 from copy import deepcopy
 
+import sys
 import numpy as np
+np.set_printoptions(threshold=sys.maxsize)
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.backend_bases import MouseButton
 from matplotlib.figure import Figure

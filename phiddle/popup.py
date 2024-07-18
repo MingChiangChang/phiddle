@@ -66,7 +66,7 @@ class Popup(QWidget):
         self.temp_profile_prompt = QLabel()
         self.temp_profile_prompt.setText("Temp profile year")
         self.temp_profile_dropdown = QComboBox()
-        self.temp_profile_year_options = ["2024", "2023"] # IDEA: These option can be made into a config file
+        self.temp_profile_year_options = ["2024", "2023", "2021"] # IDEA: These option can be made into a config file
         self.temp_profile_dropdown.addItems(self.temp_profile_year_options)
 
         grid_layout.addWidget(self.std_noise_prompt, 0, 0)

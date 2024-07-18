@@ -5,7 +5,10 @@ import numpy as np
 import pandas as pd
 import h5py
 
-from temp_profile import left_right_width_2024, left_right_width_2023
+from temp_profile import (
+        left_right_width_2024, left_right_width_2023,
+        temperature_profile_func_dict, width_func_dict
+    )
 from center_finder_asym import get_center_asym
 from util import collect_data_and_q, collect_conditions, collect_positions, get_condition, two_lorentz
 from datastructure import LabelData
@@ -39,6 +42,9 @@ class datamodel():
         self.df = pd.DataFrame(self.df_data)
         self.left_right_width = left_right_width_2024
         self.labeldata = LabelData()
+        self.temperature_profile_year = "2024"
+        self.temperature_profile_func_dict = temperature_profile_func_dict
+        self.width_func_dict = width_func_dict
 
 
     def read_h5(self, file_path, q_path=None):
@@ -115,16 +121,20 @@ class datamodel():
         self.ind = ind
 
     def set_temp_profile_params_by_year(self, year):
-        if int(year) == 2024:
-            self.left_right_width = left_right_width_2024
+        if year not in temperature_profile_func_dict:
+            print("Year specified does not exist. This shouldn't happen.",
+                  "Please contact Ming!")
             return
-        if int(year) == 2023:
-            self.left_right_width = left_right_width_2023
-            return
-        if int(year) == 2021:
-            pass
-        print("Year specified does not exist. This shouldn't happen.",
-              "Please contact Ming!")
+        
+        self.temperature_profile_year = year
+        # if int(year) == 2024:
+        #     self.left_right_width = left_right_width_2024
+        #     return
+        # if int(year) == 2023:
+        #     self.left_right_width = left_right_width_2023
+        #     return
+        # if int(year) == 2021:
+        #     pass
 
 
     def get_lps_update_dict(self):
@@ -274,11 +284,15 @@ class datamodel():
 
 
     def get_current_temp_profile(self):
-        left_width, right_width = self.left_right_width(self.current_dwell, self.current_tpeak)
-        temp_func = two_lorentz(self.current_tpeak, 0., left_width, right_width)
+        # left_width, right_width = self.left_right_width(self.current_dwell, self.current_tpeak)
+        # temp_func = two_lorentz(self.current_tpeak, 0., left_width, right_width)
+        temp_func = self.temperature_profile_func_dict[self.temperature_profile_year](self.current_dwell,
+                                                                                      self.current_tpeak)
+        width_func = self.width_func_dict[self.temperature_profile_year]
 
         if self.df['center_idx'][self.ind] is None:
-            self.df.at[self.ind, 'center_idx'] = get_center_asym(self.df['data'][self.ind], left_width, right_width)
+            self.df.at[self.ind, 'center_idx'] = get_center_asym(self.df['data'][self.ind],
+                                                      *width_func(self.current_dwell, self.current_tpeak))
 
         xaxis = self.get_current_xaxis()
         self.xaxis = xaxis           

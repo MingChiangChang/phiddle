@@ -7,7 +7,7 @@ import copy as cp
 from astropy.modeling import models, fitting
 
 
-def get_center_asym(data, left_fwhm = 1., right_fwhm = 1., window = 21):
+def get_center_asym(data, left_fwhm = 1., right_fwhm = None, window = 21):
     # Using the correlation method
     im1 = np.array(data[:,:])
     im = cp.deepcopy(im1)
@@ -16,7 +16,10 @@ def get_center_asym(data, left_fwhm = 1., right_fwhm = 1., window = 21):
     weights_max = []
     corr = []
     mid = im.shape[1]
-    scale = right_fwhm/left_fwhm # < 0
+    if right_fwhm is not None:
+        scale = right_fwhm/left_fwhm # < 0
+    else:
+        scale = 1.
     x = np.array(range(im1.shape[1]) )
     correlation = np.zeros(im1.shape[1])
     # smoothed = fft_smoothing(im1, 15)
