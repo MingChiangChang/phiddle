@@ -15,7 +15,7 @@ from matplotlib.backends.backend_qtagg import (
 from tqdm import tqdm
 
 
-from util import index_phase, minmax_norm, remove_back_slash
+from util import index_phase, minmax_norm, remove_back_slash, __version__, __date__ 
 from model import datamodel
 from stripeview import stripeview
 from globalview import globalview
@@ -35,6 +35,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                  h5_path=None,
                  csv_path=None):
         super().__init__()
+        self.setWindowTitle(f"Phiddle v{__version__} {__date__}") 
         self._createMenuBar()
         self.logger = logging.getLogger(__name__)
         self.stripeview = stripeview()
@@ -362,7 +363,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(), [])
-        self.phase_diagram_list.show(list(phase_dict))
+        self.phase_diagram_list._show(list(phase_dict))
 
     def update_pd_plot(self, phase_list):
         phase_dict = self.model.get_dict_for_phase_diagram()
