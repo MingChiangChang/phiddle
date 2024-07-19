@@ -638,7 +638,7 @@ class stripeview(FigureCanvasQTAgg):
 
         if hasattr(self, 'cations'):
             for cation, frac in zip(self.cations, self.fracs):
-                filename += "_self."
+                # filename += "_self."
                 filename += f"{cation}_{frac:.3f}"
         return filename
 

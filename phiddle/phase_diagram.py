@@ -12,6 +12,7 @@ from util import COLORS
 
 # FIXME: Always read phases before plotting
 # TODO: Allow user to choose volume plot and simplex phase regions
+# TODO: After changing the axes options, read the list of phases that are being checked
 
 class PhaseDiagramView(FigureCanvasQTAgg):
 
@@ -267,7 +268,6 @@ class PhaseDiagramList(QWidget):
         self.outer_layout.addLayout(self.axis3_layout)
 
         self.check_all_box = QCheckBox("Select All")
-        # self.check_all_box.setCheckState(Qt.CheckState.Checked)
         self.check_all_box.stateChanged.connect(self.select_all)
 
         self.axis3_label.hide()
@@ -311,12 +311,8 @@ class PhaseDiagramList(QWidget):
             i += 1
         return ls
 
-    # @option_ls.setter
-    # def option_ls(self, value):
-    #     self._option_ls = value
 
-
-    def show(self, phases):
+    def _show(self, phases):
 
         ordered_phase = []
         if "Amorphous" in phases:
@@ -345,12 +341,10 @@ class PhaseDiagramList(QWidget):
 
 
     def update_phase_diagram(self):
-        # self.checked_signal.emit([checkbox.isChecked()
-        #                   for checkbox in self.widget_ls])
+        self.checked_signal.emit(self.get_checked_phase_names())
 
-        self.checked_signal.emit([checkbox.text()
-                          for checkbox in self.widget_ls if checkbox.isChecked()])
-
+    def get_checked_phase_names(self):
+        return [checkbox.text() for checkbox in self.widget_ls if checkbox.isChecked()]
 
     def dim_changed(self):
         if self.dim_selection_box.currentIndex() == 0:

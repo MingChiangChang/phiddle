@@ -180,15 +180,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.tabs.addTab(widget, "Labeler")
         self.tabs.addTab(pd_widget, "Phase Map")
         self.tabs.addTab(lp_widget, "Lattice Param")
-        self.tabs.currentChanged.connect(self.update_pd_tab)
-        self.tabs.currentChanged.connect(self.update_lp_tab)
+        self.tabs.currentChanged.connect(self.update_tab)
         self.setCentralWidget(self.tabs)
 
 
     def _createMenuBar(self):
         menuBar = self.menuBar()
-        # menuBar.setNativeMenuBar(False)
-        # Creating menus using a QMenu object
         fileMenu = QMenu(" &File", self)
         browse_data_file_act = QtGui.QAction("Browse Data File", self)
         browse_data_file_act.triggered.connect(self.browse_button_clicked)
@@ -216,7 +213,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         helpMenu.addAction("test")
 
     def browse_button_clicked(self):
-        self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
+        self.h5_path, _ = QFileDialzog.getOpenFileName(None, "Open h5", "", "")
         if self.h5_path.endswith("h5"):
             self.model.read_h5(self.h5_path)
             if hasattr(self.model, "cations"):
@@ -349,6 +346,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
         cations = self.model.get_cations()
 
+        self.phase_diagram_list._show(list(phase_dict))
+
         for phase in phase_dict_full:
             if phase not in phase_dict:
                 phase_dict[phase] = {}
@@ -362,8 +361,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 phase_dict[phase][cation] += phase_dict_full[phase][cation]
 
         self.phase_diagram_view.plot(phase_dict,
-                                     self.phase_diagram_list.get_current_axes(), [])
-        self.phase_diagram_list._show(list(phase_dict))
+                                     self.phase_diagram_list.get_current_axes(),
+                                     self.phase_diagram_list.get_checked_phase_names()
+                                  )
 
     def update_pd_plot(self, phase_list):
         phase_dict = self.model.get_dict_for_phase_diagram()
