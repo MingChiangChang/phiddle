@@ -34,6 +34,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
 
     def plot(self, phase_dict, axes = ["Dwell", "Tpeak"] , phase_list=None):
 
+        # TODO: Swtiching to 3D plot unsync the check list and the plot
         self.phase_dict = phase_dict
         phase_name_ls = np.array(list(phase_dict))
         if phase_list is not None:
@@ -48,7 +49,6 @@ class PhaseDiagramView(FigureCanvasQTAgg):
             xlim, xlabel, xscale = self.get_2d_axis_info(axes[0])
             ylim, ylabel, yscale = self.get_2d_axis_info(axes[1])
 
-            # self.phase_diagram.clear()
             for idx, phase in enumerate(phase_name_ls):
                 self.phase_diagram.scatter(phase_dict[phase][axes[0]],
                                            phase_dict[phase][axes[1]],
@@ -99,16 +99,13 @@ class PhaseDiagramView(FigureCanvasQTAgg):
 
 
             for idx, phase in enumerate(phase_name_ls):
-                # print("axes 0:",len(phase_dict[phase][axes[0]]), phase_dict[phase][axes[0]])
-                # print("axes 1:",len(phase_dict[phase][axes[1]]), phase_dict[phase][axes[1]])
-
                 self.phase_diagram.scatter(transform[0](phase_dict[phase][axes[0]]),
-                                           transform[1](phase_dict[phase][axes[1]]),
-                                           zs = transform[2](phase_dict[phase][axes[2]]),
-                                           label=phase,
-                                           color=COLORS[((idx+1) % len(COLORS)-1)],
-                                           s=50,
-                                           alpha=0.5)
+                                      transform[1](phase_dict[phase][axes[1]]),
+                                      zs = transform[2](phase_dict[phase][axes[2]]),
+                                      label=phase,
+                                      color=COLORS[((idx+1) % len(COLORS)-1)],
+                                      s=50,
+                                      alpha=0.5)
             if phase_list is not None:
                 for idx, phase in enumerate(others):
                     self.phase_diagram.scatter(transform[0](phase_dict[phase][axes[0]]),

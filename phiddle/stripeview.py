@@ -19,8 +19,6 @@ from pyPhaseLabel import evaluate_obj
 # TODO: This need major refactoring and abstraction
 #       1. Remove repetitive code in stripeview to make clear API
 #       2. Model should use emit so view controller has less thing to do
-# TODO: Right click after selecting range should show the full range (7/20/24)
-# TODO: when adding new cifs, stick pattern replots in full range instead of selected range
 # TODO: Allow vmin vmax selection in heatmap (slide bar?)
 
 class stripeview(FigureCanvasQTAgg):

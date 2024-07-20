@@ -340,13 +340,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.update_lp_tab()
 
 
+    # TODO: Merge these to functions
     def update_pd_tab(self):
         # TODO: have a combo box for full or center phase ploting
         phase_dict = self.model.get_dict_for_phase_diagram()
         phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
         cations = self.model.get_cations()
-
-        self.phase_diagram_list._show(list(phase_dict))
 
         for phase in phase_dict_full:
             if phase not in phase_dict:
@@ -360,6 +359,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             for cation in cations:
                 phase_dict[phase][cation] += phase_dict_full[phase][cation]
 
+        self.phase_diagram_list._show(list(phase_dict))
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
                                      self.phase_diagram_list.get_checked_phase_names()
@@ -382,10 +382,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             for cation in cations:
                 phase_dict[phase][cation] += phase_dict_full[phase][cation]
 
+        self.phase_diagram_list._show(list(phase_dict))
         # FIXME: Bug after changing h5s
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
                                      phase_list)
+    ###################################
 
     def update_lp_tab(self):
         phase_dict = self.model.get_dict_for_phase_diagram()
