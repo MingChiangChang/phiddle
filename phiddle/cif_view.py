@@ -32,7 +32,7 @@ class CIFView(QWidget):
 
         for cif in cif_list:
             checkbox = QCheckBox(cif)
-            checkbox.clicked.connect(self.update_stick_pattern)
+            checkbox.stateChanged.connect(self.update_stick_pattern)
             self.widget_ls.append(checkbox)
             self.layout.addWidget(checkbox)
 
@@ -59,7 +59,7 @@ class CIFView(QWidget):
         for idx, cif in enumerate(cif_list):
             if idx >= len(self.widget_ls): # Save 2 spots for Default options
                 checkbox = QCheckBox(cif)
-                checkbox.clicked.connect(self.update_stick_pattern)
+                checkbox.stateChanged.connect(self.update_stick_pattern)
                 self.widget_ls.append(checkbox)
                 self.layout.addWidget(checkbox)
             else:

@@ -242,9 +242,6 @@ class stripeview(FigureCanvasQTAgg):
             self.draw()
             return
 
-        # if ((event.inaxes in [self.spectra]) and (event.button is MouseButton.RIGHT):
-
-
         if event.inaxes in [self.heatmap]:
             self.RightX = int(event.xdata)
             self.bottomY = 0  # int(event.ydata)
@@ -279,7 +276,9 @@ class stripeview(FigureCanvasQTAgg):
                 self.avg_pattern = self.data[q_min_ind:q_max_ind, self.x_min_ind]
             else:
                 self.avg_pattern = np.mean(
-                    self.data[q_min_ind:q_max_ind, self.x_min_ind:self.x_max_ind], axis=1)
+                    self.data[q_min_ind:q_max_ind, self.x_min_ind:self.x_max_ind],
+                    axis=1)
+
             self.avg_q = self.q[q_min_ind:q_max_ind]
             pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
 
@@ -601,7 +600,10 @@ class stripeview(FigureCanvasQTAgg):
 
         self.stick_patterns.plot()
         self.stick_patterns.legend(handles=proxies, fontsize=7, loc="upper right")
-        self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+        if hasattr(self, 'avg_q'):
+            self.stick_patterns.set_xlim((self.avg_q[0], self.avg_q[-1]))
+        else:
+            self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
         self.stick_patterns.set_ylim((0, 1))
         self.draw()
 
