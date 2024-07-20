@@ -416,7 +416,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 left_width, right_width = self.stripeview.left_right_width(
                                    self.model.df['Tpeak'][ind],
                                    self.model.df['Dwell'][ind]
-                              )
+                                   ) # TODO: update to use model instead
                 center = get_center_asym(data['data'], left_width, right_width)
                 y, _, _ = minmax_norm(data['data'][:, center])
                 q = data['q']

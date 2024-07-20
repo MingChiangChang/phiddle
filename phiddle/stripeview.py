@@ -19,9 +19,10 @@ from pyPhaseLabel import evaluate_obj
 # TODO: This need major refactoring and abstraction
 #       1. Remove repetitive code in stripeview to make clear API
 #       2. Model should use emit so view controller has less thing to do
-# TODO: Right click after selecting range should show the full range
+# TODO: Right click after selecting range should show the full range (7/20/24)
 # TODO: when adding new cifs, stick pattern replots in full range instead of selected range
 # TODO: Allow vmin vmax selection in heatmap (slide bar?)
+
 class stripeview(FigureCanvasQTAgg):
 
     heatmap_release = pyqtSignal(int, int)
@@ -107,18 +108,7 @@ class stripeview(FigureCanvasQTAgg):
         return range(self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX)),
                      self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))+1)
 
-
-
-    def move(self, move_idx):
-        # self.LeftX += move_idx 
-        # self.RightX += move_idx 
-
-        self.spectra_left_x = np.min(self.q)
-        self.spectra_right_x = np.max(self.q)
-
-        self.t = self.get_temperature(self.LeftX) # This can be a get-only property
-        self.heatmap.set_title(self.get_title(self.t)) 
-
+    def set_heatmap_title(self):
         if self.LeftX == self.RightX: # Repeating code
             self.t = self.get_temperature(self.LeftX)
             self.heatmap.set_title(self.get_title(self.t))
@@ -126,7 +116,13 @@ class stripeview(FigureCanvasQTAgg):
             self.t_left = self.get_temperature(self.LeftX)
             self.t_right = self.get_temperature(self.RightX)
             self.heatmap.set_title(self.get_title(self.t_left, self.t_right))
-                                   
+
+    def move(self, move_idx):
+
+        self.spectra_left_x = np.min(self.q)
+        self.spectra_right_x = np.max(self.q)
+
+        self.set_heatmap_title()
 
         # Let this be here for now
         q_min_ind = find_first_larger(self.q, self.bottomY)
@@ -163,9 +159,9 @@ class stripeview(FigureCanvasQTAgg):
         self.selection_box.set_xdata(self.x)
         self.temp_selection_box.set_xdata(self.x)
         self.selection_box.set_ydata(self.y)
-        self.draw()
 
-        self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
+        self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2,
+                          label="XRD") 
         self.spectra.set_xlim((self.avg_q[0], self.avg_q[-1]))
 
         if self.fit_result is not None:
@@ -207,36 +203,47 @@ class stripeview(FigureCanvasQTAgg):
             self.moving = True
 
 
+    def is_moveless_right_click(self, event):
+        return ((event.inaxes in [self.spectra])
+                and (event.button is MouseButton.RIGHT)
+                and (event.x == self._clicked_x))
+
 
     def onrelease(self, event):
         # TODO: auto check phases that are within selected range
+        if self.is_moveless_right_click(event):
 
-        if ((event.inaxes in [self.spectra])  # Detect moveless right clicks 
-                and (event.button is MouseButton.RIGHT)
-                and (event.x == self._clicked_x)):
             self.spectra.clear()
             self.spectra_left_x = np.min(self.q)
             self.spectra_right_x = np.max(self.q)
-            (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
-
-            if self.fit_result is not None:
-                self.plot_label_result_w_spectra()
-            else:
-                (self.avgplot, ) = self.spectra.plot(self.avg_q, # FIXME: Limited ranges, not the desired behavior
-                                             minmax_norm(self.avg_pattern)[0],
-                                             linewidth=2, color='k', label="XRD")
-            self.spectra.legend(fontsize=7, loc="upper right")
-
-            self.spectra.set_xlim((self.q[0], self.q[-1]))
-            self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+            (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x,
+                                                            self.spectra_box_y,
+                                                            color='r')
 
             self.avg_q = deepcopy(self.q)
             if self.x_min_ind == self.x_max_ind:
                 self.avg_pattern = self.data[:, self.x_min_ind]
             else:
-                self.avg_pattern = np.mean(self.data[:, self.x_min_ind:self.x_max_ind], axis=1)
+                self.avg_pattern = np.mean(
+                        self.data[:, self.x_min_ind:self.x_max_ind], axis=1
+                        )
+
+            if self.fit_result is not None:
+                self.plot_label_result_w_spectra()
+            else: # FIXME: Limited ranges, not the desired behavior
+                (self.avgplot, ) = self.spectra.plot(self.avg_q, 
+                                             minmax_norm(self.avg_pattern)[0],
+                                             linewidth=2, color='k', label="XRD")
+            self.spectra.legend(fontsize=7, loc="upper right")
+            self.spectra.set_ylim((-0.3, 1.1))
+            self.spectra.set_xlim((self.q[0], self.q[-1]))
+            self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+
             self.draw()
             return
+
+        # if ((event.inaxes in [self.spectra]) and (event.button is MouseButton.RIGHT):
+
 
         if event.inaxes in [self.heatmap]:
             self.RightX = int(event.xdata)
@@ -259,13 +266,7 @@ class stripeview(FigureCanvasQTAgg):
                 self.LeftX, self.RightX = self.RightX, self.LeftX
             if self.bottomY > self.topY:
                 self.bottomY, self.topY = self.topY, self.bottomY
-            if self.LeftX == self.RightX:
-                self.t = self.get_temperature(self.LeftX)
-                self.heatmap.set_title(self.get_title(self.t))
-            else:
-                self.t_left = self.get_temperature(self.LeftX)
-                self.t_right = self.get_temperature(self.RightX)
-                self.heatmap.set_title(self.get_title(self.t_left, self.t_right))
+            self.set_heatmap_title()
                                        
             # Let this be here for now
             q_min_ind = find_first_larger(self.q, self.bottomY)
@@ -447,7 +448,8 @@ class stripeview(FigureCanvasQTAgg):
         self.draw()
         
 
-    def plot_new_data(self, data, xaxis, temp_profile_func, xlabel, xx=None, stick_patterns=None, ):
+    def plot_new_data(self, data, xaxis, temp_profile_func, xlabel,
+                      xx=None, stick_patterns=None):
         """ This will include initializing some attributes like self.q """
         self.clear_figures()
         self.q = data['q']
@@ -505,8 +507,8 @@ class stripeview(FigureCanvasQTAgg):
                                              minmax_norm(self.avg_pattern)[0],
                                              linewidth=2, color='k', label="XRD")
         self.spectra.legend(fontsize=7, loc="upper right")
-        self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+        self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.spectra.set_ylim((-0.3, 1.1))
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         self.spectra.set_ylabel("Avg intensity (a.u.)")
