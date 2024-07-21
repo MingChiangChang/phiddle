@@ -129,14 +129,6 @@ class datamodel():
             return
         
         self.temperature_profile_year = year
-        # if int(year) == 2024:
-        #     self.left_right_width = left_right_width_2024
-        #     return
-        # if int(year) == 2023:
-        #     self.left_right_width = left_right_width_2023
-        #     return
-        # if int(year) == 2021:
-        #     pass
 
 
     def get_lps_update_dict(self):
@@ -284,22 +276,29 @@ class datamodel():
                 label.tpeak = self.temp_func(np.array(self.transform_data_idx_to_x(label.x_idx)))
         
 
-
-    def get_current_temp_profile(self):
-        # left_width, right_width = self.left_right_width(self.current_dwell, self.current_tpeak)
-        # temp_func = two_lorentz(self.current_tpeak, 0., left_width, right_width)
+    def get_temp_profile_at(self, ind):
+        """
+        Returns xaxis, temperature function, and center position (in data index)
+        Temperature profile can be obtained by temp_func(xaxis)
+        """
         temp_func = self.temperature_profile_func_dict[self.temperature_profile_year](self.current_dwell,
                                                                                       self.current_tpeak)
         width_func = self.width_func_dict[self.temperature_profile_year]
 
-        if self.df['center_idx'][self.ind] is None:
-            self.df.at[self.ind, 'center_idx'] = get_center_asym(self.df['data'][self.ind],
-                                                      *width_func(self.current_dwell, self.current_tpeak))
-
-        xaxis = self.get_current_xaxis()
+        if self.df['center_idx'][ind] is None:
+            # FIXME: Hiddne side effect
+            center = get_center_asym(
+                    self.df['data'][ind],
+                    *width_func(self.df['Tpeak'][ind], self.df['Dwell'][ind]))
+            self.df.at[ind, 'center_idx'] = center 
+        
+        xaxis = self.get_xaxis(ind)
         self.xaxis = xaxis           
         self.temp_func = temp_func           
-        return xaxis, temp_func
+        return xaxis, temp_func, center
+
+    def get_current_temp_profile(self):
+        return self.get_temp_profile_at(self.ind)
 
     def get_current_phases_bw_x_range(self, x_min_ind, x_max_ind):
         phases = set()
@@ -313,6 +312,20 @@ class datamodel():
                 for phase_name in phase_names:
                     phases.add(phase_name)
         return list(phases)
+
+    def get_xaxis(self, ind):
+        if 'xx' in self.df:
+            xmin = self.df['xx'][ind][0]
+            xmax = self.df['xx'][ind][-1]
+            xaxis = np.arange(xmax-xmin)# (xmax-xmin)/2
+            xaxis -= xaxis[int(len(xaxis)*self.df['center_idx'][self.ind]/len(self.df['xx'][self.ind]))]
+        else:
+            xmin = 0
+            xmax = self.df['data'][self.ind].shape[1]
+            xaxis = np.arange(xmax-xmin) * 10 # 10 um per column
+            xaxis -= xaxis[self.df['center_idx'][self.ind]]
+        self.xaxis = xaxis
+        return xaxis
 
     def get_current_xaxis(self):
         if self.current_xx is not None:

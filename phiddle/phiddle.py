@@ -351,33 +351,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         if tab_num == 2:
             self.update_lp_tab()
 
-
-    # TODO: Merge these to functions
-    # def update_pd_tab(self):
-    #     # TODO: have a combo box for full or center phase ploting
-    #     phase_dict = self.model.get_dict_for_phase_diagram()
-    #     phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
-    #     cations = self.model.get_cations()
-
-    #     for phase in phase_dict_full:
-    #         if phase not in phase_dict:
-    #             phase_dict[phase] = {}
-    #             phase_dict[phase]['Dwell'] = []
-    #             phase_dict[phase]['Tpeak'] = []
-    #             for cation in cations:
-    #                 phase_dict[phase][cation] = []
-    #         phase_dict[phase]['Dwell'] += phase_dict_full[phase]['Dwell']
-    #         phase_dict[phase]['Tpeak'] += phase_dict_full[phase]['Tpeak']
-    #         for cation in cations:
-    #             phase_dict[phase][cation] += phase_dict_full[phase][cation]
-
-    #     self.phase_diagram_list._show(list(phase_dict))
-    #     self.phase_diagram_view.plot(phase_dict,
-    #                                  self.phase_diagram_list.get_current_axes(),
-    #                                  self.phase_diagram_list.get_checked_phase_names()
-    #                               )
-
     def update_pd_plot(self, phase_list=None):
+
+        # TODO: have a combo box for full or center phase ploting
         phase_dict = self.model.get_dict_for_phase_diagram()
         phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
         cations = self.model.get_cations()
@@ -429,15 +405,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             for ind, phases in tqdm(zip(indicies, phase_ls)):
                 data_dict = self.model.get_lps_update_dict()
                 data = self.model[ind]
-                left_width, right_width = self.stripeview.left_right_width(
-                                   self.model.df['Tpeak'][ind],
-                                   self.model.df['Dwell'][ind]
-                                   ) # TODO: update to use model instead
-                center = get_center_asym(data['data'], left_width, right_width)
+                center = data["center_idx"]
+                if center is None:
+                    _, _, center = self.model.get_temp_profile_at(ind)
                 y, _, _ = minmax_norm(data['data'][:, center])
-                q = data['q']
 
-                res, uncer = self.labeler.fit_phases(q, y, phases)
+                res, uncer = self.labeler.fit_phases(data['q'], y, phases)
+
                 for j, cp in enumerate(res.CPs):
                     data_dict['refined_lps'].append(
                             [cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ]
@@ -576,7 +550,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.labeler.set_hyperparams(std_noise, mean, std, max_phase, expand_degree, background_length,
                                         max_iter, optimize_mode, background_option)
         self.model.set_temp_profile_params_by_year(year)
-        xaxis, temp_profile_func = self.model.get_current_temp_profile()
+        xaxis, temp_profile_func, _ = self.model.get_current_temp_profile()
         self.stripeview.replot_w_new_center(xaxis, temp_profile_func)
          
     def update_checked_cif_list(self, x_min_ind, x_max_ind):
@@ -637,7 +611,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.stripeview.avg_pattern = None  # Not good
         self.stripeview.clear_figures()
-        xaxis, temp_profile_func = self.model.get_current_temp_profile()
+        xaxis, temp_profile_func, _ = self.model.get_current_temp_profile()
 
         xlabel = self.model.get_stripe_xlabel()
         self.stripeview.plot_new_data(
