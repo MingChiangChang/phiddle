@@ -222,14 +222,21 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 for i, cation in enumerate(self.model.cations):
                     self.phase_diagram_list.comp_str[i] = cation
                     self.lattice_param_list.comp_str[i] = cation
-                self.phase_diagram_list.update_combo_boxes()
-                self.lattice_param_list.update_axis_combo_boxes()
+            else:
+                self.phase_diagram_list.composition_dim = 0
+                self.lattice_param_list.composition_dim  = 0
+
+            self.phase_diagram_list.update_combo_boxes()
+            self.lattice_param_list.update_axis_combo_boxes()
             self.ind = 0
             # self._update(self.ind)
         elif self.h5_path.endswith("udi"):
             self.model.read_udi(self.h5_path)
             self.ind = 0
             self._update(self.ind) # FIXME: This should tell us how many dimension is allowed
+        else:
+            print("File format not supported")
+
 
     def browse_csv_button_clicked(self):
         self.csv_path, _ = QFileDialog.getOpenFileName(

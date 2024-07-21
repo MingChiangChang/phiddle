@@ -64,7 +64,7 @@ class datamodel():
         
         self.df_data['x'], self.df_data['y'] = collect_positions(self.h5, self.conds)
         if 'fracs' in list(self.h5[self.conds[0]].attrs):
-            self.cations = self.h5[self.conds[0]].attrs['cations']
+            self.cations = self.h5[self.conds[0]].attrs['cations'].tolist()
 
             fracs = []
             for i, cation in enumerate(self.cations):
@@ -75,6 +75,8 @@ class datamodel():
                 fracs.append(_frac)
             self.df_data['cations'] = [self.cations for _ in range(self.size)]
             self.df_data['fracs'] = (np.array(fracs).T).tolist()
+        else:
+            self.cations = []
 
 
         if 'xx' in list(self.h5[self.conds[0]].attrs):
@@ -221,7 +223,7 @@ class datamodel():
             phase_dict[phase]['Dwell'] = sub_df['Dwell'].to_list()
             phase_dict[phase]['Tpeak'] = sub_df['Tpeak'].to_list()
             phase_dict[phase]['refined_lps'] = sub_df['refined_lps'].to_list()
-            if hasattr(self, 'cations'):
+            if self.cations:
                 for _, cation in enumerate(self.cations):
                     phase_dict[phase][cation] = sub_df[cation].to_list()
 
@@ -392,7 +394,7 @@ class datamodel():
         self._ind = new_ind
         self.current_dwell, self.current_tpeak = get_condition(
             self.conds[new_ind])
-        if hasattr(self, 'cations'):
+        if self.cations:
             self.current_composition = {c: f for c, f in zip(self.df.iloc[new_ind]['cations'],
                                           self.df.iloc[new_ind]['fracs'])}
         else:
