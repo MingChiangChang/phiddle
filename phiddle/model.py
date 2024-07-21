@@ -186,8 +186,8 @@ class datamodel():
 
 
     def is_refined(self, phase_name):
-        indicies = self.get_index_with_phase(phase_name)
-        return np.all([self.df['is_refined'][ind] for ind in indicies])
+        indices = self.get_index_with_phase(phase_name)
+        return np.all([self.df['is_refined'][ind] for ind in indices])
 
 
     def __getitem__(self, ind):
@@ -223,21 +223,22 @@ class datamodel():
         
 
     def get_dict_for_lp_plot(self, phase):
-        indicies = self.get_index_with_phase(phase)
+        indices = self.get_index_with_phase(phase)
         lp_dict = {}
-        lp_dict["Tpeak"] = self.df.loc[indicies, 'Tpeak'].to_list()
-        lp_dict["Dwell"] = self.df.loc[indicies, 'Dwell'].to_list()
-        lp_dict["x"] = self.df.loc[indicies, 'x'].to_list()
-        lp_dict["y"] = self.df.loc[indicies, 'y'].to_list()
+        lp_dict["phases"] =self.df.loc[indices, "phases"].to_list()
+        lp_dict["Tpeak"] = self.df.loc[indices, 'Tpeak'].to_list()
+        lp_dict["Dwell"] = self.df.loc[indices, 'Dwell'].to_list()
+        lp_dict["x"] = self.df.loc[indices, 'x'].to_list()
+        lp_dict["y"] = self.df.loc[indices, 'y'].to_list()
         cations = self.get_cations()
         for _, cation in enumerate(cations):
-            lp_dict[cation] = self.df.loc[indicies, cation].to_list()
-        lp_dict["refined_lps"] = self.df.loc[indicies, 'refined_lps'].to_list()
-        lp_dict["refined_lps_uncer"] = self.df.loc[indicies, 'refined_lps_uncer'].to_list()
-        lp_dict["act"] = self.df.loc[indicies, 'act'].to_list()
-        lp_dict["act_uncer"] = self.df.loc[indicies, 'act_uncer'].to_list()
-        lp_dict["width"] = self.df.loc[indicies, 'width'].to_list()
-        lp_dict["width_uncer"] = self.df.loc[indicies, 'width_uncer'].to_list()
+            lp_dict[cation] = self.df.loc[indices, cation].to_list()
+        lp_dict["refined_lps"] = self.df.loc[indices, 'refined_lps'].to_list()
+        lp_dict["refined_lps_uncer"] = self.df.loc[indices, 'refined_lps_uncer'].to_list()
+        lp_dict["act"] = self.df.loc[indices, 'act'].to_list()
+        lp_dict["act_uncer"] = self.df.loc[indices, 'act_uncer'].to_list()
+        lp_dict["width"] = self.df.loc[indices, 'width'].to_list()
+        lp_dict["width_uncer"] = self.df.loc[indices, 'width_uncer'].to_list()
         return lp_dict
 
 
@@ -278,19 +279,21 @@ class datamodel():
 
     def get_temp_profile_at(self, ind):
         """
-        Returns xaxis, temperature function, and center position (in data index)
+        Returns xaxis, temperature function, and  center position (in data index)
         Temperature profile can be obtained by temp_func(xaxis)
         """
         temp_func = self.temperature_profile_func_dict[self.temperature_profile_year](self.current_dwell,
                                                                                       self.current_tpeak)
         width_func = self.width_func_dict[self.temperature_profile_year]
 
-        if self.df['center_idx'][ind] is None:
+        center = self.df['center_idx'][ind]
+        if center is None:
             # FIXME: Hiddne side effect
             center = get_center_asym(
                     self.df['data'][ind],
                     *width_func(self.df['Tpeak'][ind], self.df['Dwell'][ind]))
             self.df.at[ind, 'center_idx'] = center 
+       
         
         xaxis = self.get_xaxis(ind)
         self.xaxis = xaxis           

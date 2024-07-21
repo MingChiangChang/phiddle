@@ -395,14 +395,14 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         if phase == "":
             return
 
-        indicies = self.model.get_index_with_phase(phase)
+        indices = self.model.get_index_with_phase(phase)
         if self.model.is_refined(phase):
             refined_result_for_plot = self.model.get_refined_lp_of_phase(phase) 
         else:
-            phase_ls = self.model.get_labeled_phases(indicies)
+            phase_ls = self.model.get_labeled_phases(indices)
 
             refined_result_for_plot = []
-            for ind, phases in tqdm(zip(indicies, phase_ls)):
+            for ind, phases in tqdm(zip(indices, phase_ls)):
                 data_dict = self.model.get_lps_update_dict()
                 data = self.model[ind]
                 center = data["center_idx"]
