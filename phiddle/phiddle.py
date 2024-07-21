@@ -286,37 +286,42 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         # TODO: All load/browse button, if run successfully, should be updating all tabs
         self.load_fn, _ = QFileDialog.getOpenFileName( None, "Open", "", "JSON Files (*.json)")
 
-        if self.load_fn:
-            with open(self.load_fn, 'r') as f:
-                load_meta_data = json.load(f)
+        if not self.load_fn:
+            self.logger.error(f'ERROR: File in .json not found! Check if you have moved you file around')
 
-            if (os.path.isfile(load_meta_data["h5_path"])
-                    and os.path.isfile(load_meta_data["csv_path"])):
+        with open(self.load_fn, 'r') as f:
+            meta_data = json.load(f)
 
-                self.model.read_h5(load_meta_data["h5_path"])
-                if hasattr(self.model, "cations"):
-                    self.phase_diagram_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
-                    self.lattice_param_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
-                    for i, cation in enumerate(self.model.cations):
-                        self.phase_diagram_list.comp_str[i] = cation
-                        self.lattice_param_list.comp_str[i] = cation
-                    self.phase_diagram_list.update_combo_boxes()
-                    self.lattice_param_list.update_axis_combo_boxes()
-                self.h5_path = load_meta_data["h5_path"]
-                self.labeler.read_csv(load_meta_data["csv_path"])
-                self.csv_path = load_meta_data["csv_path"]
-                self.cifview.update_cif_list(
-                    [phase.name for phase in self.labeler.phases])
-                self.model.update_phases(load_meta_data["phases"])
-                if "full_phase_diagram" in load_meta_data:
-                    self.model.labeldata.load_stored_label_data(load_meta_data["full_phase_diagram"])
-                else:
-                    self.model.clear_label_data()
-                if "center_idx" in load_meta_data:
-                    self.model.load_center_idx(load_meta_data["center_idx"])
-                self.ind = 0
+        if (os.path.isfile(meta_data["h5_path"])
+                and os.path.isfile(meta_data["csv_path"])):
+
+            self.model.read_h5(meta_data["h5_path"])
+            if hasattr(self.model, "cations"):
+                self.phase_diagram_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
+                self.lattice_param_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
+                for i, cation in enumerate(self.model.cations):
+                    self.phase_diagram_list.comp_str[i] = cation
+                    self.lattice_param_list.comp_str[i] = cation
             else:
-                self.logger.error(f'ERROR: File in .json not found! Check if you have moved you file around')
+                self.phase_diagram_list.composition_dim = 0
+                self.lattice_param_list.composition_dim  = 0
+
+            self.phase_diagram_list.update_combo_boxes()
+            self.lattice_param_list.update_axis_combo_boxes()
+
+            self.h5_path = meta_data["h5_path"]
+            self.labeler.read_csv(meta_data["csv_path"])
+            self.csv_path = meta_data["csv_path"]
+            self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
+            self.model.update_phases(meta_data["phases"])
+
+            if "full_phase_diagram" in meta_data:
+                self.model.labeldata.load_stored_label_data(meta_data["full_phase_diagram"])
+            else:
+                self.model.clear_label_data()
+            if "center_idx" in meta_data:
+                self.model.load_center_idx(meta_data["center_idx"])
+            self.ind = 0
 
 
     def labeler_setting_clicked(self):
@@ -342,37 +347,37 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def update_tab(self, tab_num):
         if tab_num == 1:
-            self.update_pd_tab()
+            self.update_pd_plot()
         if tab_num == 2:
             self.update_lp_tab()
 
 
     # TODO: Merge these to functions
-    def update_pd_tab(self):
-        # TODO: have a combo box for full or center phase ploting
-        phase_dict = self.model.get_dict_for_phase_diagram()
-        phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
-        cations = self.model.get_cations()
+    # def update_pd_tab(self):
+    #     # TODO: have a combo box for full or center phase ploting
+    #     phase_dict = self.model.get_dict_for_phase_diagram()
+    #     phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
+    #     cations = self.model.get_cations()
 
-        for phase in phase_dict_full:
-            if phase not in phase_dict:
-                phase_dict[phase] = {}
-                phase_dict[phase]['Dwell'] = []
-                phase_dict[phase]['Tpeak'] = []
-                for cation in cations:
-                    phase_dict[phase][cation] = []
-            phase_dict[phase]['Dwell'] += phase_dict_full[phase]['Dwell']
-            phase_dict[phase]['Tpeak'] += phase_dict_full[phase]['Tpeak']
-            for cation in cations:
-                phase_dict[phase][cation] += phase_dict_full[phase][cation]
+    #     for phase in phase_dict_full:
+    #         if phase not in phase_dict:
+    #             phase_dict[phase] = {}
+    #             phase_dict[phase]['Dwell'] = []
+    #             phase_dict[phase]['Tpeak'] = []
+    #             for cation in cations:
+    #                 phase_dict[phase][cation] = []
+    #         phase_dict[phase]['Dwell'] += phase_dict_full[phase]['Dwell']
+    #         phase_dict[phase]['Tpeak'] += phase_dict_full[phase]['Tpeak']
+    #         for cation in cations:
+    #             phase_dict[phase][cation] += phase_dict_full[phase][cation]
 
-        self.phase_diagram_list._show(list(phase_dict))
-        self.phase_diagram_view.plot(phase_dict,
-                                     self.phase_diagram_list.get_current_axes(),
-                                     self.phase_diagram_list.get_checked_phase_names()
-                                  )
+    #     self.phase_diagram_list._show(list(phase_dict))
+    #     self.phase_diagram_view.plot(phase_dict,
+    #                                  self.phase_diagram_list.get_current_axes(),
+    #                                  self.phase_diagram_list.get_checked_phase_names()
+    #                               )
 
-    def update_pd_plot(self, phase_list):
+    def update_pd_plot(self, phase_list=None):
         phase_dict = self.model.get_dict_for_phase_diagram()
         phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
         cations = self.model.get_cations()
@@ -391,6 +396,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.phase_diagram_list._show(list(phase_dict))
         # FIXME: Bug after changing h5s
+        if phase_list is None:
+            phase_list = self.phase_diagram_list.get_checked_phase_names()
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
                                      phase_list)
@@ -574,7 +581,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
          
     def update_checked_cif_list(self, x_min_ind, x_max_ind):
         phases = self.model.get_current_phases_bw_x_range(x_min_ind, x_max_ind+1)
-        self.cifview.set_checked_phase_names(phases)
+        if phases: 
+            self.cifview.set_checked_phase_names(phases)
 
 
     def next_label_result(self):

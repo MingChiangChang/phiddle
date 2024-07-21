@@ -123,7 +123,6 @@ def LaserPowerMing_Fall2021(tau, Temp):
     if np.isnan(P) or P < 0.:
         print("Requested power cannot be reached! Exiting now!")
         P = 1.e10
-    print("Current:", P)
     return P
 
 def sigma_Fall2021(tau, current):

@@ -20,6 +20,7 @@ from pyPhaseLabel import evaluate_obj
 #       1. Remove repetitive code in stripeview to make clear API
 #       2. Model should use emit so view controller has less thing to do
 # TODO: Allow vmin vmax selection in heatmap (slide bar?)
+# TODO: When rescale, the cif sticks can be rescaled too
 
 class stripeview(FigureCanvasQTAgg):
 
