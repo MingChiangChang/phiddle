@@ -213,12 +213,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         helpMenu.addAction("test")
 
     def browse_button_clicked(self):
-        self.h5_path, _ = QFileDialzog.getOpenFileName(None, "Open h5", "", "")
+        self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
         if self.h5_path.endswith("h5"):
             self.model.read_h5(self.h5_path)
             if hasattr(self.model, "cations"):
-                self.phase_diagram_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
-                self.lattice_param_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
+                self.phase_diagram_list.composition_dim = len(self.model.cations)
+                self.lattice_param_list.composition_dim = len(self.model.cations)
                 for i, cation in enumerate(self.model.cations):
                     self.phase_diagram_list.comp_str[i] = cation
                     self.lattice_param_list.comp_str[i] = cation
@@ -233,7 +233,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         elif self.h5_path.endswith("udi"):
             self.model.read_udi(self.h5_path)
             self.ind = 0
-            self._update(self.ind) # FIXME: This should tell us how many dimension is allowed
         else:
             print("File format not supported")
 
@@ -297,8 +296,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
             self.model.read_h5(meta_data["h5_path"])
             if hasattr(self.model, "cations"):
-                self.phase_diagram_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
-                self.lattice_param_list.composition_dim = len(self.model.cations) # WARNING: difficult to sync
+                self.phase_diagram_list.composition_dim = len(self.model.cations)
+                self.lattice_param_list.composition_dim = len(self.model.cations)
                 for i, cation in enumerate(self.model.cations):
                     self.phase_diagram_list.comp_str[i] = cation
                     self.lattice_param_list.comp_str[i] = cation
@@ -353,7 +352,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def update_pd_plot(self, phase_list=None):
 
-        # TODO: have a combo box for full or center phase ploting
+        # TODO: have a check box for full or center phase ploting
         phase_dict = self.model.get_dict_for_phase_diagram()
         phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
         cations = self.model.get_cations()
