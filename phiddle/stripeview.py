@@ -1,6 +1,6 @@
-from copy import deepcopy
-
+from copy import deepcopy, copy
 import sys
+
 import numpy as np
 np.set_printoptions(threshold=sys.maxsize)
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -20,7 +20,6 @@ from pyPhaseLabel import evaluate_obj
 #       1. Remove repetitive code in stripeview to make clear API
 #       2. Model should use emit so view controller has less thing to do
 # TODO: Allow vmin vmax selection in heatmap (slide bar?)
-# TODO: When rescale, the cif sticks can be rescaled too
 
 class stripeview(FigureCanvasQTAgg):
 
@@ -57,6 +56,7 @@ class stripeview(FigureCanvasQTAgg):
         self.cid3 = self.mpl_connect("motion_notify_event", self.onmotion)
 
         self.fit_result = None
+        self.sticks = None
 
     ######## Getters ########
     @property
@@ -236,7 +236,10 @@ class stripeview(FigureCanvasQTAgg):
             self.spectra.legend(fontsize=7, loc="upper right")
             self.spectra.set_ylim((-0.3, 1.1))
             self.spectra.set_xlim((self.q[0], self.q[-1]))
-            self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+
+            self.stick_patterns.clear()
+            self.plot_cifs(self.sticks, (self.q[0], self.q[-1]))
+            # self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
 
             self.draw()
             return
@@ -293,14 +296,22 @@ class stripeview(FigureCanvasQTAgg):
                 self.spectra.set_xlim((self.q[0], self.q[-1]))
                 self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
             elif event.button is MouseButton.RIGHT:
+
+                self.plot_cifs(self.sticks, (self.avg_q[0], self.avg_q[-1]))
                 self.spectra.set_xlim((self.avg_q[0], self.avg_q[-1]))
-                self.stick_patterns.set_xlim((self.avg_q[0], self.avg_q[-1]))
+                # if self.sticks is not None:
+                #     renormalized_sticks = self.renormalize_stick_in_range(qmin=self.avg_q[0],
+                #                                                           qmax=self.avg_q[-1])
+                #     self.plot_cifs(renormalized_sticks)
+                # self.stick_patterns.set_xlim((self.avg_q[0], self.avg_q[-1]))
 
             self.spectra.set_ylim((-0.3, 1.1))
             self.spectra.set_ylabel("Avg intensity (a.u.)")
             self.spectra.legend(fontsize=7, loc="upper right")
             self.draw()
-            self.heatmap_release.emit(self.x_min_ind, self.x_max_ind)
+
+            if event.inaxes in [self.heatmap]:
+                self.heatmap_release.emit(self.x_min_ind, self.x_max_ind)
 
     def onmotion(self, event):
         if not self.moving:
@@ -366,7 +377,7 @@ class stripeview(FigureCanvasQTAgg):
         self.spectra.legend(fontsize=7, loc="upper right")
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         res = self.rescale(self.fitted_pattern, _min, _max)
-        res = res - fit# [q_min_ind:q_max_ind]
+        res = res - fit
         self.spectra.plot(self.fitted_q, (res - .2), label="residual", c='grey')
 
     def replot_w_new_center(self, xaxis, temp_profile_func=None):
@@ -452,16 +463,14 @@ class stripeview(FigureCanvasQTAgg):
         self.clear_figures()
         self.q = data['q']
         self.data = data['data']
-        # self.cond = data['cond']
         self.xlabel = xlabel
         self.fit_result = None
         self.xx = xx
         self.temp_profile_func = temp_profile_func
         self.xaxis = xaxis
-        self.tpeak, self.dwell = data['Tpeak'], data['Dwell'] # self.get_tpeak_dwell_from_cond(self.cond)
+        self.tpeak, self.dwell = data['Tpeak'], data['Dwell']
         self.t_left = self.tpeak
         self.temp_topY = self.tpeak
-        # self.left_width, self.right_width = self.left_right_width(self.dwell, self.tpeak)
 
         self.comp_title = ""
         if 'fracs' in data:
@@ -500,7 +509,7 @@ class stripeview(FigureCanvasQTAgg):
             self.LeftX, self.RightX, color='k', alpha=0)
 
         if self.avg_pattern is None:
-            self.avg_pattern = self.data[:, self.transform_x_to_data_idx(find_first_larger(xaxis, 0.))]#round(self.data.shape[1] / 2)] # FIXME: change to center of t profile
+            self.avg_pattern = self.data[:, self.transform_x_to_data_idx(find_first_larger(xaxis, 0.))] # FIXME: change to center of t profile
         (self.avgplot, ) = self.spectra.plot(self.avg_q,
                                              minmax_norm(self.avg_pattern)[0],
                                              linewidth=2, color='k', label="XRD")
@@ -572,39 +581,51 @@ class stripeview(FigureCanvasQTAgg):
 
         self.plot_fit_result()
 
-    def plot_cifs(self, sticks):
+    def plot_cifs(self, sticks, q_range=None):
         """
         stick_patterns: dictionary: {phase: [q, peak_height]}
         """
+        if sticks is None:
+            return
         self.stick_patterns.clear()
+        self.sticks = sticks # Save for responding to user manipulations
+
+        if q_range is not None:
+            q_min, q_max = q_range
+        elif self.avg_q is not None:
+            q_min, q_max = self.avg_q[0], self.avg_q[-1]
+        else:
+            q_min, q_max = self.q[0], self.q[-1]
+
         proxies = []
         for i, phase in enumerate(sticks):
             stick = sticks[phase]
-            qs = stick[:, 0]
-            Is = stick[:, 1]
+            mask = np.logical_and(stick[:, 0]>= q_min, stick[:, 0] <= q_max)
+            qs = stick[mask, 0]
+            Is = stick[mask, 1]
+            Is /= np.max(Is)
 
-            boxes = [Rectangle((q - 0.1, 0), .2, I)
-                     for q, I in zip(qs, Is)]
-            pc = PatchCollection(boxes, facecolor=COLORS[i], alpha=1.)
-            proxy = mlines.Line2D(
-                [],
-                [],
-                marker="_",
-                linewidth=1,
-                color=COLORS[i],
-                markersize=15,
-                label=phase)
+            pc = self.get_patches(qs, Is, COLORS[i])
+            proxy = self.get_legend_proxy(COLORS[i], phase)
             proxies.append(proxy)
             self.stick_patterns.add_collection(pc)
 
         self.stick_patterns.plot()
         self.stick_patterns.legend(handles=proxies, fontsize=7, loc="upper right")
-        if hasattr(self, 'avg_q'):
-            self.stick_patterns.set_xlim((self.avg_q[0], self.avg_q[-1]))
-        else:
-            self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+        self.stick_patterns.set_xlim((q_min, q_max))
         self.stick_patterns.set_ylim((0, 1))
         self.draw()
+
+    def get_patches(self, qs, Is, color):
+        boxes = [Rectangle((q - 0.1, 0), .2, I)
+                 for q, I in zip(qs, Is)]
+        pc = PatchCollection(boxes, facecolor=color, alpha=1.)
+        return pc
+
+    def get_legend_proxy(self, color, phase_name):
+        return mlines.Line2D([], [], marker="_", linewidth=1, color=color,
+                             markersize=15, label=phase_name)
+
 
     def get_tpeak_dwell_from_cond(self, cond):
         s = cond.split('_')
@@ -677,4 +698,25 @@ class stripeview(FigureCanvasQTAgg):
     def rescale(self, d, _min, _max):
         d = minmax_denorm(d, self._min, self._max)
         return  (d - _min) / _max
+
+    def renormalize_stick_in_range(self, qmin, qmax):
+        if self.sticks is None:
+            return 
+
+        rs = {} # deepcopy(self.sticks)
+
+        for phase in self.sticks:
+            sticks = rs[phase]
+            _q = sticks[:, 0] 
+
+            mask = np.logical_and(_q >= qmin, _q <= qmax)
+            _q = _q[mask]
+            _I = sticks[mask, 1]
+            if len(_q) != 0:
+                _I /= np.max(_I)
+
+            rs[phase] = np.vstack((_q, _I)).T
+
+        return rs
+            
 
