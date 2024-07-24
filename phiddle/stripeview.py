@@ -603,7 +603,8 @@ class stripeview(FigureCanvasQTAgg):
             mask = np.logical_and(stick[:, 0]>= q_min, stick[:, 0] <= q_max)
             qs = stick[mask, 0]
             Is = stick[mask, 1]
-            Is /= np.max(Is)
+            if len(Is) != 0:
+                Is /= np.max(Is)
 
             pc = self.get_patches(qs, Is, COLORS[i])
             proxy = self.get_legend_proxy(COLORS[i], phase)
