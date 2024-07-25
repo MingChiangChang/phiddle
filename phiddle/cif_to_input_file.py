@@ -27,26 +27,26 @@ def cif_to_input(cif_paths, output_path, q_range,
     Main function that you should be interfacing with this module
     '''
     if not output_path.endswith('.csv'):
-        out_path += '.csv'
+        output_path += '.csv'
     with open(output_path, 'w') as f:
         for idx, cif_path in enumerate(cif_paths):
-            print(cif_path)
             cif = CifParser(cif_path)
+            cif_dict = cif.as_dict()
+            key = _get_key(cif_dict)
+            info_dict = cif_dict[key]
+            info_dict['file_name'] = os.path.basename(cif_path)[:-4]
             lattice = CIFFile(cif_path).SGLattice()
-            write_cif(f, idx, cif, lattice, _type, q_range, wvlen)
+            write_cif(f, idx, info_dict, lattice, _type, q_range, wvlen)
 
 
-def write_cif(f, idx, cif, lattice, _type, q_range, wvlen):
+def write_cif(f, idx, info_dict, lattice, _type, q_range, wvlen):
     f.write(f'{idx},')
-    write_crystal_info(f, cif, _type)
+    write_crystal_info(f, info_dict, _type)
     write_peaks_info(f, lattice, q_range, wvlen)
 
 
-def write_crystal_info(f, cif, _type):
-    cif_dict = cif.as_dict()
-    key = _get_key(cif_dict)
-    info_dict = cif_dict[key]
-    f.write(_get_phase_name(info_dict))
+def write_crystal_info(f, info_dict, _type):
+    f.write(_get_phase_name(info_dict, default=info_dict['file_name']))
     f.write(',')
     f.write(_get_crystal_system(info_dict))
     f.write(',')
@@ -77,18 +77,24 @@ def _get_key(cif_dict):
     return list(cif_dict.keys())[0]
 
 
-def _get_phase_name(info_dict):
+def _get_phase_name(info_dict, default=None):
+    # TODO: Generalize this
+    print(info_dict)
     if "_chemical_formula_structural" in info_dict.keys():
         phase_name = remove_blank(info_dict["_chemical_formula_structural"])
     elif "_chemical_formula_moiety" in info_dict.keys():
         phase_name = remove_blank(info_dict["_chemical_formula_moiety"])
     elif "_chemical_formula_sum" in info_dict.keys():
         phase_name = remove_blank(info_dict["_chemical_formula_sum"])
-    else:
-        error("cannot find phase name in cif")
-    try:
+    elif default is not None:
+        phase_name = default
+        print("cannot find phase name in cif, default to file name")
+
+    if "_symmetry_space_group_name_H-M" in info_dict:
+        space_group = remove_blank(info_dict["_symmetry_space_group_name_H-M" ])
+    elif "_space_group_name_H-M_alt" in info_dict:
         space_group = remove_blank(info_dict["_space_group_name_H-M_alt"])
-    except KeyError:
+    else: 
         print(f"No _space_group_name_H-M_alt for {phase_name}")
         space_group = ""
     return phase_name + "_" + space_group
@@ -163,6 +169,7 @@ if __name__ == "__main__":
     path = home / "Downloads" / "ino"
     path = home / "Desktop" / "Code" / "SARA.jl" / "BiTiO" / "cifs"
     path = home / "Downloads" / "toCornell_Ming" / "cifs"
+    path = home / "Downloads" / "al2o3"
     # path = home / "Desktop" / "TaSnCoO" / "cifs"
     # path = home / "Downloads" / "igzo"
     # path = home / "Downloads" / "AlLiFeO copy"
@@ -172,4 +179,5 @@ if __name__ == "__main__":
     # cif_paths = [str(path / 'Bi2Ti2O7_ICSD.cif') , str(path / 'Delta.cif')]
     out_path = path  # / 'Ta-Sn-O'
     print(cif_paths)
-    cif_to_input(cif_paths, out_path, (10, 80))
+    print(out_path)
+    cif_to_input(cif_paths, str(out_path), (10, 80))
