@@ -30,12 +30,13 @@ class PhaseDiagramView(FigureCanvasQTAgg):
 
         self.dim = 2
         self.phase_dict = {} # Purposely use stateful widget to separate the weight from main view manager
+        self.phase_list = []
         # self.draw()
 
     def plot(self, phase_dict, axes = ["Dwell", "Tpeak"] , phase_list=None):
 
-        # TODO: Swtiching to 3D plot unsync the check list and the plot
         self.phase_dict = phase_dict
+        self.phase_list = phase_list
         phase_name_ls = np.array(list(phase_dict))
         if phase_list is not None:
             others = [p for p in phase_name_ls if p not in phase_list]
@@ -192,10 +193,10 @@ class PhaseDiagramView(FigureCanvasQTAgg):
 
     def change_dim(self, value, axes):
         self.dim = value
-        self.plot(self.phase_dict, axes)
+        self.plot(self.phase_dict, axes, self.phase_list)
 
     def change_axes(self, axes):
-        self.plot(self.phase_dict, axes)
+        self.plot(self.phase_dict, axes, self.phase_list)
 
 
 

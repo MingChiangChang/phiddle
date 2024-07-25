@@ -229,7 +229,7 @@ class stripeview(FigureCanvasQTAgg):
 
             if self.fit_result is not None:
                 self.plot_label_result_w_spectra()
-            else: # FIXME: Limited ranges, not the desired behavior
+            else:
                 (self.avgplot, ) = self.spectra.plot(self.avg_q, 
                                              minmax_norm(self.avg_pattern)[0],
                                              linewidth=2, color='k', label="XRD")
