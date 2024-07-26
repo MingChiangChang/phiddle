@@ -295,6 +295,7 @@ class stripeview(FigureCanvasQTAgg):
             if event.button is MouseButton.LEFT:
                 self.spectra.set_xlim((self.q[0], self.q[-1]))
                 self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+                self.plot_cifs(self.sticks, (self.q[0], self.q[-1]))
             elif event.button is MouseButton.RIGHT:
 
                 self.plot_cifs(self.sticks, (self.avg_q[0], self.avg_q[-1]))
