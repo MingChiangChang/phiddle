@@ -7,12 +7,13 @@ from PyQt6.QtWidgets import (
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.ticker as mticker
+from scipy.spatial import ConvexHull
+from scipy.spatial._qhull import QhullError
 
 from util import COLORS
 
-# FIXME: Always read phases before plotting
 # TODO: Allow user to choose volume plot and simplex phase regions
-# TODO: After changing the axes options, read the list of phases that are being checked
+# TODO: Combine phase diagram list signal to just one, much easier to sync
 
 class PhaseDiagramView(FigureCanvasQTAgg):
 
@@ -33,11 +34,13 @@ class PhaseDiagramView(FigureCanvasQTAgg):
         self.phase_list = []
         # self.draw()
 
-    def plot(self, phase_dict, axes = ["Dwell", "Tpeak"] , phase_list=None):
+    def plot(self, phase_dict, axes = ["Dwell", "Tpeak"],  phase_list=None, plot_convex_hull=False):
 
         self.phase_dict = phase_dict
         self.phase_list = phase_list
         phase_name_ls = np.array(list(phase_dict))
+
+        others = []
         if phase_list is not None:
             others = [p for p in phase_name_ls if p not in phase_list]
             phase_name_ls = phase_list 
@@ -51,11 +54,27 @@ class PhaseDiagramView(FigureCanvasQTAgg):
             ylim, ylabel, yscale = self.get_2d_axis_info(axes[1])
 
             for idx, phase in enumerate(phase_name_ls):
-                self.phase_diagram.scatter(phase_dict[phase][axes[0]],
-                                           phase_dict[phase][axes[1]],
-                                           label=phase,
+                x = np.array(phase_dict[phase][axes[0]])
+                y = np.array(phase_dict[phase][axes[1]])
+                self.phase_diagram.scatter(x, y, label=phase,
                                            color=COLORS[((idx+1) % len(COLORS)-1)],
                                            alpha=0.5)
+                if plot_convex_hull:
+                    try:
+                        hull = ConvexHull(np.vstack((x, y)).T)
+
+                        for simplex in hull.simplices:
+                            self.phase_diagram.plot(x[simplex], y[simplex],
+                                          color=COLORS[((idx+1) % len(COLORS)-1)],
+                                          alpha=0.5)
+                        
+                        self.phase_diagram.fill(x[hull.vertices], y[hull.vertices],
+                                       color=COLORS[((idx+1) % len(COLORS)-1)],
+                                       alpha=0.05)
+                    except QhullError:
+                        print("Linear points for {phase}. Unable to create convex hullregion.")
+
+                    # self.phase_diagram.fill(x[hull.vertices[0],0], points[hull.vertices[0],1], 'ro')
             if phase_list is not None:
                 for idx, phase in enumerate(others):
                     self.phase_diagram.scatter(phase_dict[phase][axes[0]],
@@ -129,6 +148,11 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                 self.format_log_tick(self.get_log_axis(scales))
             self.phase_diagram.legend()
         self.draw()
+
+
+    # def plot_convex_hull(self, phase_dict, axes = ["Dwell", "Tpeak"] , phase_list=None):
+
+
 
     def format_log_tick(self, axis):
         axis.set_major_formatter(mticker.FuncFormatter(self.log_tick_formatter))
@@ -258,12 +282,20 @@ class PhaseDiagramList(QWidget):
         self.axis3_layout.addWidget(self.axis3_selection_box)
         self.axis3_selection_box.currentIndexChanged.connect(self.axes_changed)
 
+        self.plot_selection_layout = QHBoxLayout()
+        self.plot_selection_box = QComboBox()
+        self.plot_selection_box.addItems(["Scatter plot", "Convex Hull"])
+        self.plot_selection_layout.addWidget(QLabel("Plot Type"))
+        self.plot_selection_layout.addWidget(self.plot_selection_box)
+        self.plot_selection_box.currentIndexChanged.connect(self.plot_changed)
+
         self.outer_layout = QVBoxLayout()
         self.layout = QVBoxLayout()
         self.outer_layout.addWidget(self.dim_selection_box)
         self.outer_layout.addLayout(self.axis1_layout)
         self.outer_layout.addLayout(self.axis2_layout)
         self.outer_layout.addLayout(self.axis3_layout)
+        self.outer_layout.addLayout(self.plot_selection_layout)
 
         self.check_all_box = QCheckBox("Select All")
         self.check_all_box.stateChanged.connect(self.select_all)
@@ -363,6 +395,9 @@ class PhaseDiagramList(QWidget):
 
         self.dim_change_signal.emit(dim, axes)
 
+    @property
+    def convex_hull(self):
+        return self.plot_selection_box.currentText() == "Convex Hull"
 
     def axes_changed(self):
         axes = self.get_current_axes()
@@ -376,3 +411,6 @@ class PhaseDiagramList(QWidget):
             axes.append(self.axis3_selection_box.currentText())
         return axes
 
+
+    def plot_changed(self):
+        pass

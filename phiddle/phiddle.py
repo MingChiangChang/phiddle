@@ -373,9 +373,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         # FIXME: Bug after changing h5s
         if phase_list is None:
             phase_list = self.phase_diagram_list.get_checked_phase_names()
+        plot_convex_hull = self.phase_diagram_list.convex_hull
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
-                                     phase_list)
+                                     phase_list, plot_convex_hull)
     ###################################
 
     def update_lp_tab(self):
