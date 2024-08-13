@@ -60,7 +60,7 @@ class stripeview(FigureCanvasQTAgg):
 
     ######## Getters ########
     @property
-    def x(self):
+    def box_x(self):
         return np.array([self.LeftX,
                          self.LeftX,
                          self.RightX,
@@ -77,7 +77,7 @@ class stripeview(FigureCanvasQTAgg):
 
 
     @property
-    def y(self):
+    def box_y(self):
         return np.array([self.bottomY,
                          self.topY,
                          self.topY,
@@ -152,12 +152,12 @@ class stripeview(FigureCanvasQTAgg):
 
         self.spectra.clear()
         (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
-        # (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
+        # (self.selection_box, ) = self.heatmap.plot(self.box_x, self.box_y, color='r')
 
 
-        self.selection_box.set_xdata(self.x)
-        self.temp_selection_box.set_xdata(self.x)
-        self.selection_box.set_ydata(self.y)
+        self.selection_box.set_xdata(self.box_x)
+        self.temp_selection_box.set_xdata(self.box_x)
+        self.selection_box.set_ydata(self.box_y)
 
         self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2,
                           label="XRD") 
@@ -254,9 +254,9 @@ class stripeview(FigureCanvasQTAgg):
             # self.topY = int(event.ydata)
 
         if event.inaxes in [self.heatmap, self.spectra]:
-            self.selection_box.set_xdata(self.x)
-            self.temp_selection_box.set_xdata(self.x)
-            self.selection_box.set_ydata(self.y)
+            self.selection_box.set_xdata(self.box_x)
+            self.temp_selection_box.set_xdata(self.box_x)
+            self.selection_box.set_ydata(self.box_y)
 
             self.aspan = self.heatmap.axvspan(self.LeftX, self.RightX, 0, 1, color='b', alpha=0.25,)
 
@@ -325,16 +325,16 @@ class stripeview(FigureCanvasQTAgg):
         if event.inaxes == self.heatmap:
             self.RightX = int(event.xdata)
 
-            self.selection_box.set_xdata(self.x)
-            self.temp_selection_box.set_xdata(self.x)
-            self.selection_box.set_ydata(self.y)
+            self.selection_box.set_xdata(self.box_x)
+            self.temp_selection_box.set_xdata(self.box_x)
+            self.selection_box.set_ydata(self.box_y)
             self.draw()
         elif event.inaxes == self.spectra:
             self.topY = event.xdata
             self.spectra_right_x = event.xdata
-            self.selection_box.set_xdata(self.x)
-            # self.temp_selection_box.set_xdata(self.x)
-            self.selection_box.set_ydata(self.y)
+            self.selection_box.set_xdata(self.box_x)
+            # self.temp_selection_box.set_xdata(self.box_x)
+            self.selection_box.set_ydata(self.box_y)
             self.spectra_select_box.set_xdata(self.spectra_box_x)
             self.draw()
 
@@ -343,8 +343,8 @@ class stripeview(FigureCanvasQTAgg):
         self.temp_selection_box.set_xdata([x])
         self.RightX = x
         self.LeftX = x
-        self.selection_box.set_xdata(self.x)
-        self.selection_box.set_ydata(self.y)
+        self.selection_box.set_xdata(self.box_x)
+        self.selection_box.set_ydata(self.box_y)
         self.draw()
 
     def clear_figures(self):
@@ -392,8 +392,8 @@ class stripeview(FigureCanvasQTAgg):
         self.LeftX, self.RightX = 0, 0
         self.t_left = self.get_temperature(self.LeftX)
 
-        (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
-        (self.temp_selection_box, ) = self.temp_profile.plot(self.x, self.temp_y, color='r') 
+        (self.selection_box, ) = self.heatmap.plot(self.box_x, self.box_y, color='r')
+        (self.temp_selection_box, ) = self.temp_profile.plot(self.box_x, self.temp_y, color='r') 
 
 
         self.heatmap.imshow(self.data, extent=(xaxis[0], xaxis[-1], self.q[-1], self.q[0]),
@@ -425,7 +425,7 @@ class stripeview(FigureCanvasQTAgg):
         self.heatmap.clear()
 
 
-        (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
+        (self.selection_box, ) = self.heatmap.plot(self.box_x, self.box_y, color='r')
         self.heatmap.imshow(self.data,
                             extent=(self.xaxis[0], self.xaxis[-1], self.q[-1], self.q[0]),
                             aspect = (self.xaxis[-1]-self.xaxis[0])/(self.q[-1]-self.q[0]))
@@ -464,6 +464,8 @@ class stripeview(FigureCanvasQTAgg):
         self.clear_figures()
         self.q = data['q']
         self.data = data['data']
+        self.x = data['x']
+        self.y = data['y']
         self.xlabel = xlabel
         self.fit_result = None
         self.xx = xx
@@ -488,8 +490,8 @@ class stripeview(FigureCanvasQTAgg):
 
         self.LeftX, self.RightX = 0, 0
 
-        (self.selection_box, ) = self.heatmap.plot(self.x, self.y, color='r')
-        (self.temp_selection_box, ) = self.temp_profile.plot(self.x, self.temp_y, color='r') 
+        (self.selection_box, ) = self.heatmap.plot(self.box_x, self.box_y, color='r')
+        (self.temp_selection_box, ) = self.temp_profile.plot(self.box_x, self.temp_y, color='r') 
 
         self.heatmap.imshow(self.data, extent=(xaxis[0], xaxis[-1], self.q[-1], self.q[0]),
                             aspect = (xaxis[-1]-xaxis[0])/(self.q[-1]-self.q[0]))
@@ -643,8 +645,11 @@ class stripeview(FigureCanvasQTAgg):
             _right = "$_{right}$"
             title += f" T{_left}: {int(t_left)}C T{_right}: {int(t_right)}C"
 
+        title += '\n'
+        title += f"x:{self.x:.1f} y:{self.y:.1f}"
+
         if self.comp_title:
-            title += '\n'
+            title += ' '
             title += self.comp_title
 
         return title
