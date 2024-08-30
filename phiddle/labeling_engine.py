@@ -271,8 +271,8 @@ class labeler():
     def get_dict_from_cl(self, cl):
         c_dict = {}
         c_dict["a"] = cl.a
-        c_dict["b"] = cl.a
-        c_dict["c"] = cl.a
+        c_dict["b"] = cl.b
+        c_dict["c"] = cl.c
         c_dict["α"] = cl.α * 180 / np.pi
         c_dict["β"] = cl.β * 180 / np.pi
         c_dict["γ"] = cl.γ * 180 / np.pi
