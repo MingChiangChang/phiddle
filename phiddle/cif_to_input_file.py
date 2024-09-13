@@ -57,10 +57,17 @@ def write_peaks_info(f, lattice, q_range, wvlen):
     crystal = Crystal('test', lattice)
     xrd = PowderDiffraction(crystal).data
 
+    qs = []
+    Is = []
     for peak in xrd:
         q = xrd[peak]['qpos'] * 10
         I = xrd[peak]['r']
-        print(q, I)
+        qs.append(q)
+        Is.append(I)
+    Is = np.array(Is)
+    Is /= np.max(Is)
+
+    for peak, q, I in zip(xrd, qs, Is):
         if q_range[0] < q < q_range[1] and I > 0.0001:
             f.write(f'\n{peak[0]},{peak[1]},{peak[2]},{q},{I}')
     f.write('#\n')

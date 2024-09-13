@@ -493,8 +493,12 @@ class stripeview(FigureCanvasQTAgg):
         (self.selection_box, ) = self.heatmap.plot(self.box_x, self.box_y, color='r')
         (self.temp_selection_box, ) = self.temp_profile.plot(self.box_x, self.temp_y, color='r') 
 
+        if len(xaxis) == 1:
+            xspan = 1
+        else:
+            xspan = xaxis[-1]-xaxis[0]
         self.heatmap.imshow(self.data, extent=(xaxis[0], xaxis[-1], self.q[-1], self.q[0]),
-                            aspect = (xaxis[-1]-xaxis[0])/(self.q[-1]-self.q[0]))
+                            aspect = xspan/(self.q[-1]-self.q[0]))
         self.heatmap.set_box_aspect(1)
         self.title = self.get_title(t_left=self.t_left)
         self.heatmap.set_title(self.title)
@@ -512,6 +516,7 @@ class stripeview(FigureCanvasQTAgg):
             self.LeftX, self.RightX, color='k', alpha=0)
 
         if self.avg_pattern is None:
+            print(self.data.shape)
             self.avg_pattern = self.data[:, self.transform_x_to_data_idx(find_first_larger(xaxis, 0.))] # FIXME: change to center of t profile
         (self.avgplot, ) = self.spectra.plot(self.avg_q,
                                              minmax_norm(self.avg_pattern)[0],

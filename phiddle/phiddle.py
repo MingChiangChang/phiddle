@@ -256,7 +256,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         else:
             self.csv_path, _ = QFileDialog.getSaveFileName(
                 None, "Store csv", "", "CSV Files (*.csv)")
-            cif_to_input(self.cif_paths, self.csv_path, (10, 80))
+            cif_to_input(self.cif_paths, self.csv_path, (10, 60)) # TODO: add range to settings
             self.labeler.read_csv(self.csv_path)
             self.cifview.update_cif_list(
                 [phase.name for phase in self.labeler.phases])
@@ -611,7 +611,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         self.stripeview.avg_pattern = None  # Not good
         self.stripeview.clear_figures()
-        xaxis, temp_profile_func, _ = self.model.get_current_temp_profile()
+
+        print(self.model.current_data.data.shape)
+        if np.ndim(np.squeeze(self.model.current_data.data)) > 1:
+            xaxis, temp_profile_func, _ = self.model.get_current_temp_profile()
+        else:
+            xaxis, temp_profile_func = [0], lambda x: x
 
         xlabel = self.model.get_stripe_xlabel()
         self.stripeview.plot_new_data(

@@ -120,6 +120,7 @@ def find_first_larger(arr, value):
     for idx, val in enumerate(arr):
         if val > value:
             return idx
+    return 0
 
 
 def find_first_smaller(arr, value):
