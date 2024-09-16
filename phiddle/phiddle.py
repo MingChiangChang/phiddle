@@ -612,7 +612,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.stripeview.avg_pattern = None  # Not good
         self.stripeview.clear_figures()
 
-        print(self.model.current_data.data.shape)
         if np.ndim(np.squeeze(self.model.current_data.data)) > 1:
             xaxis, temp_profile_func, _ = self.model.get_current_temp_profile()
         else:
