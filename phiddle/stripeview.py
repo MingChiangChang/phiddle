@@ -414,6 +414,8 @@ class stripeview(FigureCanvasQTAgg):
         self.aspan = self.heatmap.axvspan(
             self.LeftX, self.RightX, color='k', alpha=0)
 
+        self.plot_xrd()
+
         self.draw()
 
     def replot_heatmap(self, xaxis=None, temp_profile_func=None):
@@ -734,4 +736,32 @@ class stripeview(FigureCanvasQTAgg):
 
         return rs
             
+    def plot_xrd(self):
+        # Basic replot; assuming nothing changes and everything is read from current state
+        self.spectra.clear()
+        (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
 
+        q_min_ind = find_first_larger(self.q, self.bottomY)
+        q_max_ind = find_first_smaller(self.q, self.topY)
+        self.x_min_ind = self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX))
+        if self.LeftX == self.RightX:
+            self.avg_pattern = self.data[q_min_ind:q_max_ind, self.x_min_ind]
+        else:
+            self.avg_pattern = np.mean(
+                self.data[q_min_ind:q_max_ind, self.x_min_ind:self.x_max_ind], axis=1)
+        pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
+        self.avg_q = self.q[q_min_ind:q_max_ind]
+
+        self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
+
+        if self.fit_result is not None:
+            self.plot_scaled_results(_min, _max, q_min_ind, q_max_ind)
+        
+        self.spectra.set_xlim((self.q[0], self.q[-1]))
+        self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+        self.plot_cifs(self.sticks, (self.q[0], self.q[-1]))
+
+        self.spectra.set_ylim((-0.3, 1.1))
+        self.spectra.set_ylabel("Avg intensity (a.u.)")
+        self.spectra.legend(fontsize=7, loc="upper right")
+        self.draw()

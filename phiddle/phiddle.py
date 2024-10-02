@@ -657,6 +657,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def user_moved_slider(self, value):
         self.stripeview.slider_moveto(value) 
+        self.stripeview.plot_xrd()
         # self.stripeview.update_temp_profile(value)
 
     def set_center(self):
