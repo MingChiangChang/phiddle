@@ -288,7 +288,7 @@ class datamodel():
 
         center = self.df['center_idx'][ind]
         if center is None:
-            # FIXME: Hiddne side effect
+            # FIXME: Hidden side effect
             center = get_center_asym(
                     self.df['data'][ind],
                     *width_func(self.df['Tpeak'][ind], self.df['Dwell'][ind]))
@@ -335,7 +335,9 @@ class datamodel():
             xmin = self.current_xx[0]
             xmax = self.current_xx[-1]
             xaxis = np.arange(xmax-xmin)# (xmax-xmin)/2
-            xaxis -= xaxis[int(len(xaxis)*self.df['center_idx'][self.ind]/len(self.current_xx))]
+            # xaxis -= xaxis[int(len(xaxis)*self.df['center_idx'][self.ind]/len(self.current_xx))]
+            xaxis -= self.get_idx_interpolate(xaxis,
+                             len(xaxis)*self.df['center_idx'][self.ind]/len(self.current_xx))
         else:
             xmin = 0
             xmax = self.df['data'][self.ind].shape[1]
@@ -354,7 +356,7 @@ class datamodel():
         rc = []
         for c in center:
             if c is not None:
-                rc.append(int(c))
+                rc.append(c)
             else:
                 rc.append(None)
         return rc
@@ -439,3 +441,16 @@ class datamodel():
 
     def transform_data_idx_to_x(self, x):
         return int(self.xaxis[0] + x / self.df['data'][self.ind].shape[1] * len(self.xaxis))
+
+
+    # xaxis -= xaxis[int(len(xaxis)*self.df['center_idx'][self.ind]/len(self.current_xx))]
+    def get_idx_interpolate(self, arr, idx):
+        # idx can be a float
+        _i = int(idx)
+        _r = idx - _i
+
+        return arr[_i] + (arr[_i+1] - arr[_i])*_r
+
+         
+
+

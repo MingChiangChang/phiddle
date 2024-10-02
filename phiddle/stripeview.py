@@ -516,7 +516,6 @@ class stripeview(FigureCanvasQTAgg):
             self.LeftX, self.RightX, color='k', alpha=0)
 
         if self.avg_pattern is None:
-            print(self.data.shape)
             self.avg_pattern = self.data[:, self.transform_x_to_data_idx(find_first_larger(xaxis, 0.))] # FIXME: change to center of t profile
         (self.avgplot, ) = self.spectra.plot(self.avg_q,
                                              minmax_norm(self.avg_pattern)[0],
@@ -691,6 +690,10 @@ class stripeview(FigureCanvasQTAgg):
         if data_idx >= self.data.shape[1]:
             return self.data.shape[1]-1
         return max(0, data_idx)
+
+
+    def transform_real_x_to_data_x(self, x):
+        return x/len(self.xaxis) * self.data.shape[1]
 
     def transform_data_idx_to_x(self, x):
         return int(self.xaxis[0] + x / self.data.shape[1] * len(self.xaxis))

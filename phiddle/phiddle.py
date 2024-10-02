@@ -28,6 +28,12 @@ from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
 
 # TODO: Better error handling, mostly for loading file
+# TODO: Stripeview should update once the new center is Set
+# FIXME: Moving left and right gives inconsistent temperature readings
+#        What is the temperature that actually get written? Should be the one showing on screen
+# TODO: The sliding bar should start at where the center is
+
+
 
 class TopLevelWindow(QtWidgets.QMainWindow):
 
@@ -613,9 +619,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.stripeview.clear_figures()
 
         if np.ndim(np.squeeze(self.model.current_data.data)) > 1:
-            xaxis, temp_profile_func, _ = self.model.get_current_temp_profile()
+            xaxis, temp_profile_func, center = self.model.get_current_temp_profile()
         else:
-            xaxis, temp_profile_func = [0], lambda x: x
+            xaxis, temp_profile_func, center = [0], lambda x: x, 0
 
         xlabel = self.model.get_stripe_xlabel()
         self.stripeview.plot_new_data(
@@ -628,7 +634,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.stripeview.plot_label_progress(labeled_indices)
 
         self.center_slider.setRange(0, len(xaxis)-1)
-        self.center_slider.setValue(int((len(xaxis)-1)/2))
+        self.center_slider.setValue(int(center * (len(xaxis) / len(self.model.current_xx))))
 
         self.globalview.clear_figures()
         self.globalview.plot(
@@ -654,7 +660,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         # self.stripeview.update_temp_profile(value)
 
     def set_center(self):
-        c = self.stripeview.transform_x_to_data_idx(self.center_slider.value())
+        c = self.stripeview.transform_real_x_to_data_x(self.center_slider.value())
         self.model.set_current_center(c)
         xaxis = self.model.get_current_xaxis()
         self.stripeview.replot_w_new_center(xaxis)
