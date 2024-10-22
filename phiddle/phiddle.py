@@ -270,6 +270,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def save_progress_clicked(self):
         self.save_fn, _ = QFileDialog.getSaveFileName(
             self, 'Save File', "", "JSON Files (*.json)")
+
         if self.save_fn:
             storing_ds = {}
             # storing_ds["phases_diagram"] = self.model.get_dict_for_phase_diagram()
@@ -519,7 +520,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def add_to_phase_diagram(self, phase_names):
         x_indices = self.stripeview.get_selected_frames()
-        if self.model.current_center in x_indices:
+        if int(np.round(self.model.current_center)) in x_indices:
             self.model.add_to_phase_diagram(phase_names)
         temps = self.stripeview.selected_temperature
 

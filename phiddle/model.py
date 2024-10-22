@@ -352,11 +352,11 @@ class datamodel():
         return "Location (um)"
 
     def get_center_idx(self):
-        center =  self.df['center_idx'].tolist()
+        center = self.df['center_idx'].tolist()
         rc = []
         for c in center:
             if c is not None:
-                rc.append(c)
+                rc.append(float(c))
             else:
                 rc.append(None)
         return rc
@@ -413,8 +413,9 @@ class datamodel():
         self.current_dwell, self.current_tpeak = get_condition(
             self.conds[new_ind])
         if self.cations:
-            self.current_composition = {c: f for c, f in zip(self.df.iloc[new_ind]['cations'],
-                                          self.df.iloc[new_ind]['fracs'])}
+            self.current_composition =\
+            {c: f for c, f in zip(self.df.iloc[new_ind]['cations'],
+                                  self.df.iloc[new_ind]['fracs'])}
         else:
             self.current_composition = dict()
 

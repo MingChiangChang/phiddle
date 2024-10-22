@@ -26,14 +26,14 @@ class LabelData():
         return self.labels[idx]
 
     def update(self, tpeak, dwell, composition, phase, sample_num, x_idx):
+        label = PatternLabel(tpeak, dwell, composition, phase, sample_num, x_idx)
+        self.labels.append(label)
         if not sample_num in self.sample_nums:
-            self.labels.append(PatternLabel(tpeak, dwell, composition, phase, sample_num, x_idx))
             self.sample_nums.append(sample_num)
             self.x_indices[str(sample_num)] = [x_idx] # official python json automatically makes key to be strings
             return 
 
         if not x_idx in self.x_indices[str(sample_num)]:
-            self.labels.append(PatternLabel(tpeak, dwell, composition, phase, sample_num, x_idx))
             self.x_indices[str(sample_num)].append(x_idx) 
             return
 
@@ -42,9 +42,8 @@ class LabelData():
         # We will have to maintain the list to be sorted
 
         for label in self.labels:
-            if label.sample_num == sample_num: 
-                if label.x_idx == x_idx:
-                    label.phase = phase
+            if label.sample_num == sample_num and label.x_idx == x_idx:
+                label.phase = phase
 
     def remove(self, sample_num, x_idx):
         for idx, label in enumerate(self.labels):
