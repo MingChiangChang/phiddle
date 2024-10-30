@@ -1,4 +1,5 @@
 from copy import deepcopy, copy
+import requests
 import sys
 
 import numpy as np
@@ -535,9 +536,11 @@ class stripeview(FigureCanvasQTAgg):
         self.draw()
 
 
-
     def plot_fit_result(self):
+        
         fit = evaluate_obj(self.fit_result.CPs, self.fitted_q)
+        # fit = self.evaluate().json()
+        print(fit)
 
         phase_name = []
         if np.sum(self.bg) != 0.:

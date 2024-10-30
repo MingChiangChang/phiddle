@@ -42,7 +42,6 @@ class labeler():
     def fit(self, q, d, selected_phase_names = None):
         self.q = q
         self.data = deepcopy(d)
-        print(f"min: {np.min(self.data)}, max: {np.max(self.data)}")
 
         if selected_phase_names is not None:
             phase_indices = self.get_subset_phases_idx_from_names(selected_phase_names)

@@ -1,4 +1,5 @@
 import math
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -131,3 +132,13 @@ def find_first_smaller(arr, value):
 
 def remove_back_slash(s):
     return s.replace('/' , '')
+
+
+def dict_to_namespace(d):
+    # Recursively convert a dictionary to SimpleNamespace
+    if isinstance(d, dict):
+        return SimpleNamespace(**{k: dict_to_namespace(v) for k, v in d.items()})
+    elif isinstance(d, list):
+        return [dict_to_namespace(item) for item in d]
+    else:
+        return d

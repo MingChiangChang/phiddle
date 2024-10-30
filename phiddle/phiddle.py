@@ -20,6 +20,7 @@ from model import datamodel
 from stripeview import stripeview
 from globalview import globalview
 from labeling_engine import labeler
+# from label_api import labeler
 from cif_view import CIFView
 from phase_diagram import PhaseDiagramView, PhaseDiagramList
 from lattice_param_view import LatticeParamView, LatticeParamList
@@ -31,6 +32,7 @@ from center_finder_asym import get_center_asym
 # TODO: Stripeview should update once the new center is Set
 # FIXME: Moving left and right gives inconsistent temperature readings
 #        What is the temperature that actually get written? Should be the one showing on screen
+# FIXME: Remove from phase diagram does not remove the "labeled" label in model 
 # TODO: The sliding bar should start at where the center is
 
 
@@ -553,9 +555,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def update_params(self, std_noise, mean, std, max_phase,
-                      expand_degree, background_length, max_iter, optimize_mode, background_option, year):
-        self.labeler.set_hyperparams(std_noise, mean, std, max_phase, expand_degree, background_length,
-                                        max_iter, optimize_mode, background_option)
+                      expand_degree, background_length, max_iter,
+                      optimize_mode, background_option, year):
+        
+        self.labeler.set_hyperparams(std_noise, mean, std, max_phase,
+                                     expand_degree, background_length,
+                                     max_iter, optimize_mode, background_option)
         self.model.set_temp_profile_params_by_year(year)
         xaxis, temp_profile_func, _ = self.model.get_current_temp_profile()
         self.stripeview.replot_w_new_center(xaxis, temp_profile_func)
@@ -569,7 +574,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def next_label_result(self):
         if self.labeler.has_labeled:
             ind, confidence, result, fractions, bg = self.labeler.next_label_result()
-            self.stripeview.plot_n_store_label_result_w_spectra(ind, confidence, result, bg)
+            self.stripeview.plot_n_store_label_result_w_spectra(
+                       ind, confidence, result, bg
+                    )
             print("############## Output ################")
             print("")
             print(f"{ind}th most probable result")
@@ -586,8 +593,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def previous_label_result(self):
         if self.labeler.has_labeled:
-            ind, confidence, result, fractions, bg = self.labeler.previous_label_result()
-            self.stripeview.plot_n_store_label_result_w_spectra(ind, confidence, result, bg)
+            ind, confidence, result, fractions, bg =\
+                       self.labeler.previous_label_result()
+            self.stripeview.plot_n_store_label_result_w_spectra(
+                    ind, confidence, result, bg
+                )
+
             print("############## Output ################")
             print("")
             print(f"{ind}th most probable result")
