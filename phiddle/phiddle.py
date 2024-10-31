@@ -19,8 +19,8 @@ from util import index_phase, minmax_norm, remove_back_slash, __version__, __dat
 from model import datamodel
 from stripeview import stripeview
 from globalview import globalview
-from labeling_engine import labeler
-# from label_api import labeler
+# from labeling_engine import labeler
+from label_api import labeler
 from cif_view import CIFView
 from phase_diagram import PhaseDiagramView, PhaseDiagramList
 from lattice_param_view import LatticeParamView, LatticeParamList
@@ -320,7 +320,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.h5_path = meta_data["h5_path"]
             self.labeler.read_csv(meta_data["csv_path"])
             self.csv_path = meta_data["csv_path"]
-            self.cifview.update_cif_list([phase.name for phase in self.labeler.phases])
+            self.cifview.update_cif_list(self.labeler.phase_names)
             self.model.update_phases(meta_data["phases"])
 
             if "full_phase_diagram" in meta_data:
@@ -343,12 +343,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         phases = {}
         for idx, checked in enumerate(isChecked_list):
             if checked:
-                sticks = np.zeros((len(self.labeler.phases[idx].peaks), 2))
-                name = self.labeler.phases[idx].name
+                peaks = self.labeler.get_peaks_at(idx)
+                sticks = np.zeros((len(peaks), 2))
+                name = self.labeler.phase_names[idx]
 
-                for j, peak in enumerate(self.labeler.phases[idx].peaks):
-                    sticks[j, 0] = peak.q
-                    sticks[j, 1] = peak.I
+                for j, peak in enumerate(peaks):
+                    sticks[j, 0] = peak["q"]
+                    sticks[j, 1] = peak["I"]
 
                 phases[name] = sticks
         self.stripeview.plot_cifs(phases)
@@ -466,7 +467,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def label_button_clicked(self):
         self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
         self.stripeview.plot_n_store_label_result_w_spectra(
-            1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
+            1, self.labeler.probs[0], self.labeler.fit_result, self.labeler.bg)
 
     def fit_w_phase_button_clicked(self):
         selected_phase_names = self.cifview.get_checked_phase_names()
@@ -475,7 +476,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                     self.stripeview.avg_pattern,
                                     selected_phase_names)
             self.stripeview.plot_n_store_label_result_w_spectra(
-                1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
+                1, self.labeler.probs[0], self.labeler.fit_result, self.labeler.bg)
 
     def label_w_phase_button_clicked(self):
         selected_phase_names = self.cifview.get_checked_phase_names()
@@ -484,7 +485,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                     self.stripeview.avg_pattern,
                                     selected_phase_names)
             self.stripeview.plot_n_store_label_result_w_spectra(
-                1, self.labeler.t[0], self.labeler.results[0], self.labeler.bg)
+                1, self.labeler.probs[0], self.labeler.fit_result, self.labeler.bg)
 
 
     def save_residual(self):
@@ -577,17 +578,18 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.stripeview.plot_n_store_label_result_w_spectra(
                        ind, confidence, result, bg
                     )
-            print("############## Output ################")
-            print("")
-            print(f"{ind}th most probable result")
-            print(result.CPs)
-            print("")
-            print("Probability: {confidence}")
-            print("Fractions:")
-            for i, xi  in enumerate(fractions):
-                print(f"    {result.CPs[i].name}: {xi}")
-            print("")
-            print("#####################################")
+            self.labeler.print_current_CPs()
+            # print("############## Output ################")
+            # print("")
+            # print(f"{ind}th most probable result")
+            # print(result.CPs)
+            # print("")
+            # print("Probability: {confidence}")
+            # print("Fractions:")
+            # for i, xi  in enumerate(fractions):
+            #     print(f"    {result.CPs[i].name}: {xi}")
+            # print("")
+            # print("#####################################")
 
             
 
@@ -598,18 +600,19 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.stripeview.plot_n_store_label_result_w_spectra(
                     ind, confidence, result, bg
                 )
+            self.labeler.print_current_CPs()
 
-            print("############## Output ################")
-            print("")
-            print(f"{ind}th most probable result")
-            print(result.CPs)
-            print("")
-            print(f"Probability: {confidence}")
-            print("Fractions:")
-            for i, xi  in enumerate(fractions):
-                print(f"    {result.CPs[i].name}: {xi}")
-            print("")
-            print("#####################################")
+            # print("############## Output ################")
+            # print("")
+            # print(f"{ind}th most probable result")
+            # print(result.CPs)
+            # print("")
+            # print(f"Probability: {confidence}")
+            # print("Fractions:")
+            # for i, xi  in enumerate(fractions):
+            #     print(f"    {result.CPs[i].name}: {xi}")
+            # print("")
+            # print("#####################################")
 
     @property
     def ind(self):

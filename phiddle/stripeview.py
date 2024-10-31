@@ -359,23 +359,25 @@ class stripeview(FigureCanvasQTAgg):
         self.topY = 100
 
     def plot_scaled_results(self, _min, _max, q_min_ind, q_max_ind):
-        self.bg_in_range = deepcopy(self.bg)
-        fit = evaluate_obj(self.fit_result.CPs, self.fitted_q)
-        fit += self.bg_in_range
+        phase_names = list(self.fit_result)
+        fit = np.sum(np.array([self.fit_result[phase_name] for phase_name in phase_names]), 
+                     axis=0)
+        fit += self.bg
+        phase_names.remove("background")
+        self.bg_in_range = self.bg + np.array(self.fit_result["background"])
+
         fit = self.rescale(fit, _min, _max)
         self.bg_in_range = self.rescale(self.bg_in_range, _min, _max)
         
-        phase_name = []
         self.spectra.plot(self.fitted_q, fit, label="Fitted")
         self.spectra.plot(self.fitted_q, self.bg_in_range, label="background")
+
+        for phase in phase_names:
+            self.spectra.plot(self.fitted_q,
+                              np.array(self.fit_result[phase]) * self._max / _max,
+                              label=phase)
         
-        for cp in self.fit_result.CPs:
-            tmp = evaluate_obj(cp, self.fitted_q)
-            tmp *= self._max / _max
-            self.spectra.plot(self.fitted_q, tmp, label=cp.name)
-            phase_name.append(cp.name)
-        
-        self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_name)) + f" {self.confidence:.4f}")
+        self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_names)) + f" {self.confidence:.4f}")
         self.spectra.legend(fontsize=7, loc="upper right")
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         res = self.rescale(self.fitted_pattern, _min, _max)
@@ -535,28 +537,22 @@ class stripeview(FigureCanvasQTAgg):
 
         self.draw()
 
-
     def plot_fit_result(self):
-        
-        fit = evaluate_obj(self.fit_result.CPs, self.fitted_q)
-        # fit = self.evaluate().json()
-        print(fit)
+        phase_names = list(self.fit_result)
+        fit = np.sum(np.array([self.fit_result[phase_name] for phase_name in phase_names]), 
+                     axis=0)
+        fit += self.bg
+        phase_names.remove("background")
+        bg = self.bg + np.array(self.fit_result["background"])
 
-        phase_name = []
-        if np.sum(self.bg) != 0.:
-            fit += self.bg
-        else:
-            self.bg = evaluate_obj(self.fit_result.background, self.fitted_q)
-            fit += self.bg
 
         self.spectra.plot(self.fitted_q, fit, label="Fitted")
-        self.spectra.plot(self.fitted_q, self.bg, label="background")
+        self.spectra.plot(self.fitted_q, bg, label="background")
 
-        for cp in self.fit_result.CPs:
-            self.spectra.plot(self.fitted_q, evaluate_obj(cp, self.fitted_q), label=cp.name)
-            phase_name.append(cp.name)
+        for phase in phase_names:
+            self.spectra.plot(self.fitted_q, self.fit_result[phase], label=phase)
 
-        self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_name)) + f" {self.confidence:.4f}")
+        self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_names)) + f" {self.confidence:.4f}")
         self.spectra.legend(fontsize=7, loc="upper right")
         self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.spectra.set_ylim((-0.3, 1.1))
@@ -566,7 +562,7 @@ class stripeview(FigureCanvasQTAgg):
 
         self.draw()
 
-    def plot_n_store_label_result_w_spectra(self, ind, confidence, fit_result=None, bg=None):
+    def plot_n_store_label_result_w_spectra(self, ind, confidence, fit_result, bg=None):
         self.fitted_q = deepcopy(self.avg_q)
         self.fitted_pattern, self._min, self._max = minmax_norm(self.avg_pattern)
         self.ind = ind
