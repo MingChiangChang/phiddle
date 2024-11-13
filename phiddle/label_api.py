@@ -15,10 +15,12 @@ from util import minmax_norm
 
 class labeler():
 
-    def __init__(self):
+    def __init__(self, address="127.0.0.1", port="8080"):
         self.std_noise = .05
         self.mean_θ = [1., .5, .1]
         self.std_θ = [.05, .5, .1]
+        self.address = address
+        self.port = port
 
         self.max_phase = 1
         self.expand_k = 2
@@ -62,8 +64,8 @@ class labeler():
         _dict = {"csv_file": csv}
         # TODO: Write a specific module to interact with the Julia server
         # TODO: For checking return code
-        response = requests.put("http://127.0.0.1:8080/set_csv", json=_dict)
-        response = requests.get("http://127.0.0.1:8080/phase_names")
+        response = requests.put(f"{self.server_ip}/set_csv", json=_dict)
+        response = requests.get(f"{self.server_ip}/phase_names")
         print(response.json())
         self.phase_names = response.json()#[phase.name for phase in self.phases]
 
@@ -82,10 +84,10 @@ class labeler():
             _dict["optimize_mode"] = self.optimize_mode
 
         if selected_phase_names is None:
-            response = requests.post("http://127.0.0.1:8080/label", json=_dict)
+            response = requests.post(f"{self.server_ip}/label", json=_dict)
         else:
             _dict["names"] = selected_phase_names
-            response = requests.post("http://127.0.0.1:8080/label_with_phase",
+            response = requests.post(f"{self.server_ip}/label_with_phase",
                                      json=_dict)
         results, self.probs, self.bg = response.json()
         print("backgounr", self.bg)
@@ -102,7 +104,7 @@ class labeler():
         _dict["data"] = d.tolist()
         _dict["names"] = phase_names
         
-        response = requests.post("http://127.0.0.1:8080/fit_with_phase",
+        response = requests.post(f"{self.server_ip}/fit_with_phase",
                                  json=_dict)
         results, self.probs, self.bg = response.json()
 
@@ -111,10 +113,12 @@ class labeler():
             print("default to simple result")
             uncer = np.zeros(8*len(results["CPs"]))
 
-            # response = requests.post("http://127.0.0.1:8080/eval_uncertainty", # TODO: Implement this
+            # TODO: Implement this
+            # response = requests.post("http://127.0.0.1:8080/eval_uncertainty", 
             #                      json=_dict)
             # var = response.json()
-            # all_params = np.ravel(np.array([CS.get_eight_params(cp) for cp in results.CPs])) # TODO: Move this process to backend
+            # TODO: Move this process to backend
+            # all_params = np.ravel(np.array([CS.get_eight_params(cp) for cp in results.CPs])) 
             # if np.all(var >= 0):
             #     log_uncer = np.sqrt(var)
             #     uncer = np.maximum(np.abs(np.exp(np.log(all_params + log_uncer)) - all_params),
@@ -153,7 +157,7 @@ class labeler():
         return results, uncer 
 
     def get_peaks_at(self, idx: int):
-        return requests.get(f"http://127.0.0.1:8080/peak_info/{idx}").json()
+        return requests.get(f"{self.server_ip}/peak_info/{idx}").json()
         
 
     @property
@@ -163,10 +167,13 @@ class labeler():
         d -= self.bg
         return d
 
-
     @property
     def fit_result(self):
         return self.evaluate_fitted(self.label_ind, self.q)
+
+    @property
+    def server_ip(self):
+        return f"http://{self.address}:{self.port}"
 
 
     def next_label_result(self):
@@ -319,15 +326,15 @@ class labeler():
     ######### API call helpers #######
     def evaluate(self, idx, q):
         _dict = {'q': q.tolist()}
-        return np.array(requests.get(f"http://127.0.0.1:8080/evaluate/{idx}", json=_dict).json())
+        return np.array(requests.get(f"{self.server_ip}/evaluate/{idx}", json=_dict).json())
 
     def evaluate_fitted(self, idx, q):
         _dict = {'q': q.tolist()}
-        return requests.get(f"http://127.0.0.1:8080/evaluate_fitted/{idx}", json=_dict).json()
+        return requests.get(f"{self.server_ip}/evaluate_fitted/{idx}", json=_dict).json()
 
     def evaluate_fitted_background(self, idx, q):
         _dict = {'q': q.tolist()}
-        return np.array(requests.get(f"http://127.0.0.1:8080/evaluate_fitted_background/{idx}", json=_dict).json())
+        return np.array(requests.get(f"{self.server_ip}/evaluate_fitted_background/{idx}", json=_dict).json())
 
     ######### Print utils ########
     def print_current_CPs(self, uncer=None):
