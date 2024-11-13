@@ -34,6 +34,9 @@ from center_finder_asym import get_center_asym
 #        What is the temperature that actually get written? Should be the one showing on screen
 # FIXME: Remove from phase diagram does not remove the "labeled" label in model 
 # TODO: The sliding bar should start at where the center is
+# TODO: Add relative x position in stripe view figure title
+# TODO: Add spawn thread when trying to label or update model
+# TODO: Button to update all labels to currently selected temperature profile
 
 
 
@@ -51,7 +54,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.h5_path = h5_path
         self.csv_path = csv_path
         self.model = datamodel()
-        self.labeler = labeler()
+        # TODO: Should be instantiated once a csv is provided
+        #       and lives as long as the phase list stays the same
+        self.labeler = labeler() 
+
         self.cifview = CIFView([])
         self.center_slider = QSlider(orientation=QtCore.Qt.Orientation.Horizontal)
         self.center_slider.valueChanged.connect(self.user_moved_slider)
@@ -65,8 +71,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.ind = 0
             self._update(self.ind)
             self.labeler.read_csv(csv_path)
-            self.cifview.update_cif_list(
-                [phase.name for phase in self.labeler.phases])
+            self.cifview.update_cif_list(self.labeler.phase_names)
+            # [phase.name for phase in self.labeler.phases])
 
         self.phase_diagram_view = PhaseDiagramView()
         self.phase_diagram_list = PhaseDiagramList()
@@ -251,8 +257,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                  )
         if self.csv_path.endswith("csv"):
             self.labeler.read_csv(self.csv_path)
-            self.cifview.update_cif_list(
-                [phase.name for phase in self.labeler.phases])
+            self.cifview.update_cif_list(self.labeler.phase_names)
+                # [phase.name for phase in self.labeler.phases])
 
     def browse_cif_button_clicked(self):
         self.cif_paths, _ = QFileDialog.getOpenFileNames(
@@ -266,8 +272,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 None, "Store csv", "", "CSV Files (*.csv)")
             cif_to_input(self.cif_paths, self.csv_path, (10, 60)) # TODO: add range to settings
             self.labeler.read_csv(self.csv_path)
-            self.cifview.update_cif_list(
-                [phase.name for phase in self.labeler.phases])
+            self.cifview.update_cif_list(self.labeler.phase_names)
+            #    [phase.name for phase in self.labeler.phases])
 
     def save_progress_clicked(self):
         self.save_fn, _ = QFileDialog.getSaveFileName(
