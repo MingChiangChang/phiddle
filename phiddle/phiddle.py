@@ -26,7 +26,6 @@ from phase_diagram import PhaseDiagramView, PhaseDiagramList
 from lattice_param_view import LatticeParamView, LatticeParamList
 from popup import Popup
 from cif_to_input_file import cif_to_input
-from center_finder_asym import get_center_asym
 
 # TODO: Better error handling, mostly for loading file
 # TODO: Stripeview should update once the new center is Set

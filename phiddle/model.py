@@ -291,7 +291,7 @@ class datamodel():
             # FIXME: Hidden side effect
             center = get_center_asym(
                     self.df['data'][ind],
-                    *width_func(self.df['Tpeak'][ind], self.df['Dwell'][ind]))
+                    *width_func(self.df['Dwell'][ind], self.df['Tpeak'][ind]))
             self.df.at[ind, 'center_idx'] = center 
        
         
