@@ -140,8 +140,25 @@ def sigma_Fall2021(tau, current):
 ########## End of Year 2021 #########
 
 if __name__ == '__main__':
-    pass
-    # print("Latest power", LaserPowerMing_Spring2024(10000, 1000))
-    # left_width, right_width = left_right_width(10000, 1000)
-    # print("Left width", left_width)
-    # print("Right width", right_width)
+    left_width_fit = [ 9.23610385e+02,
+                       2.31591101e+02,
+                      -2.33724136e+01,
+                      -6.63593631e+01,
+                       2.38094452e-01,
+                      -2.37653526e+00, 
+                       5.05393010e+00,
+                      -4.32250685e-06]
+
+    right_width_fit = [ 4.39339896e+02,
+                       -4.51657906e+01,
+                       -9.35886967e+00,
+                       -3.51825565e+00,
+                       -2.20075111e-02,
+                       2.44098710e+00]
+
+    left_width = cubic_surface(*left_width_fit) 
+    right_width = twod_surface(*right_width_fit)
+    print("Latest power", LaserPowerMing_Spring2024(10000, 1000))
+    left_width, right_width = left_right_width_2024(10000, 1000)
+    print("Left width", left_width)
+    print("Right width", right_width)

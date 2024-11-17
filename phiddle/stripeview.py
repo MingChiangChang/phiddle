@@ -21,6 +21,7 @@ from pyPhaseLabel import evaluate_obj
 #       1. Remove repetitive code in stripeview to make clear API
 #       2. Model should use emit so view controller has less thing to do
 # TODO: Allow vmin vmax selection in heatmap (slide bar?)
+# FIXME: Size mismatch after zoom-in and zoom-out
 
 class stripeview(FigureCanvasQTAgg):
 
@@ -179,7 +180,7 @@ class stripeview(FigureCanvasQTAgg):
         if event.inaxes in [self.heatmap]:
             self.LeftX = int(event.xdata)
             self.bottomY = 0  # int(event.ydata)
-            self.topY = self.q.shape[0]
+            self.topY = np.max(self.q)
             self.spectra_left_x = np.min(self.q)
             self.spectra_right_x = np.max(self.q)
 
@@ -248,7 +249,7 @@ class stripeview(FigureCanvasQTAgg):
         if event.inaxes in [self.heatmap]:
             self.RightX = int(event.xdata)
             self.bottomY = 0  # int(event.ydata)
-            self.topY = self.q.shape[0]
+            self.topY = np.max(self.q)
         elif event.inaxes in [self.spectra]:
             self.topY = event.xdata
             self.spectra_right_x = event.xdata
@@ -469,6 +470,7 @@ class stripeview(FigureCanvasQTAgg):
         self.clear_figures()
         self.q = data['q']
         self.data = data['data']
+        self.topY = np.max(data['q'])
         self.x = data['x']
         self.y = data['y']
         self.xlabel = xlabel
@@ -502,8 +504,12 @@ class stripeview(FigureCanvasQTAgg):
             xspan = 1
         else:
             xspan = xaxis[-1]-xaxis[0]
+
+        std = np.std(self.data) 
+        median = np.median(self.data)
+        # FIXME: Should be posible to merge all calls of imshow
         self.heatmap.imshow(self.data, extent=(xaxis[0], xaxis[-1], self.q[-1], self.q[0]),
-                            aspect = xspan/(self.q[-1]-self.q[0]))
+                            aspect = xspan/(self.q[-1]-self.q[0]), vmin=median-3*std, vmax=median+3*std)
         self.heatmap.set_box_aspect(1)
         self.title = self.get_title(t_left=self.t_left)
         self.heatmap.set_title(self.title)
@@ -545,7 +551,6 @@ class stripeview(FigureCanvasQTAgg):
         phase_names.remove("background")
         bg = self.bg + np.array(self.fit_result["background"])
 
-
         self.spectra.plot(self.fitted_q, fit, label="Fitted")
         self.spectra.plot(self.fitted_q, bg, label="background")
 
@@ -558,10 +563,12 @@ class stripeview(FigureCanvasQTAgg):
         self.spectra.set_ylim((-0.3, 1.1))
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         self.spectra.set_ylabel("Avg intensity (a.u.)")
-        self.spectra.plot(self.fitted_q, (self.fitted_pattern - fit - .2), label="residual", c='grey')
+        self.spectra.plot(self.fitted_q, (self.fitted_pattern - fit - .2),
+                          label="residual", c='grey')
 
         self.draw()
 
+    # FIXME: Try to allow "next label result" while zoomed in
     def plot_n_store_label_result_w_spectra(self, ind, confidence, fit_result, bg=None):
         self.fitted_q = deepcopy(self.avg_q)
         self.fitted_pattern, self._min, self._max = minmax_norm(self.avg_pattern)
@@ -708,7 +715,7 @@ class stripeview(FigureCanvasQTAgg):
             if a >= self.data.shape[1]-1:
                 r.append(self.data.shape[1]-1)
             else:
-                r.append(max(0, a))
+                r.append(max(0, a)) # CAUTION: we assume x axis is always >= 0
         return r
 
     def rescale(self, d, _min, _max):
@@ -741,7 +748,7 @@ class stripeview(FigureCanvasQTAgg):
         (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
 
         q_min_ind = find_first_larger(self.q, self.bottomY)
-        q_max_ind = find_first_smaller(self.q, self.topY)
+        q_max_ind = find_first_smaller(self.q, self.topY) + 1
         self.x_min_ind = self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX))
         if self.LeftX == self.RightX:
             self.avg_pattern = self.data[q_min_ind:q_max_ind, self.x_min_ind]
@@ -749,7 +756,7 @@ class stripeview(FigureCanvasQTAgg):
             self.avg_pattern = np.mean(
                 self.data[q_min_ind:q_max_ind, self.x_min_ind:self.x_max_ind], axis=1)
         pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
-        self.avg_q = self.q[q_min_ind:q_max_ind]
+        self.avg_q = self.q[q_min_ind:q_max_ind+1]
 
         self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
 

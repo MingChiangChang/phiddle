@@ -66,7 +66,6 @@ class labeler():
         # TODO: For checking return code
         response = requests.put(f"{self.server_ip}/set_csv", json=_dict)
         response = requests.get(f"{self.server_ip}/phase_names")
-        print(response.json())
         self.phase_names = response.json()#[phase.name for phase in self.phases]
 
     def fit(self, q, d, selected_phase_names = None):
@@ -90,7 +89,6 @@ class labeler():
             response = requests.post(f"{self.server_ip}/label_with_phase",
                                      json=_dict)
         results, self.probs, self.bg = response.json()
-        print("backgounr", self.bg)
         self.print_fitted_result(results[0]["phase_model"])
         self.results = [result["phase_model"] for result in results]
         self.has_labeled = True
