@@ -119,11 +119,8 @@ class stripeview(FigureCanvasQTAgg):
             self.heatmap.set_title(self.get_title(self.t_left, self.t_right))
 
     def move(self, move_idx):
-
         self.spectra_left_x = np.min(self.q)
         self.spectra_right_x = np.max(self.q)
-
-        self.set_heatmap_title()
 
         # Let this be here for now
         q_min_ind = find_first_larger(self.q, self.bottomY)
@@ -135,6 +132,8 @@ class stripeview(FigureCanvasQTAgg):
 
         self.LeftX = self.transform_data_idx_to_x(self.x_min_ind) + 1
         self.RightX = self.transform_data_idx_to_x(self.x_max_ind) + 1
+
+        self.set_heatmap_title()
         
         if self.LeftX == self.RightX:
             self.avg_pattern = self.data[q_min_ind:q_max_ind, self.x_min_ind]
@@ -143,7 +142,6 @@ class stripeview(FigureCanvasQTAgg):
                 self.data[q_min_ind:q_max_ind, self.x_min_ind:self.x_max_ind], axis=1)
         self.avg_q = self.q[q_min_ind:q_max_ind]
         pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
-
 
         try:
             self.aspan.remove()
@@ -155,7 +153,6 @@ class stripeview(FigureCanvasQTAgg):
         self.spectra.clear()
         (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
         # (self.selection_box, ) = self.heatmap.plot(self.box_x, self.box_y, color='r')
-
 
         self.selection_box.set_xdata(self.box_x)
         self.temp_selection_box.set_xdata(self.box_x)
