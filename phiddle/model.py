@@ -6,8 +6,7 @@ import pandas as pd
 import h5py
 
 from temp_profile import (
-        left_right_width_2024, left_right_width_2023,
-        temperature_profile_func_dict, width_func_dict
+        left_right_width_2025, temperature_profile_func_dict, width_func_dict
     )
 from center_finder_asym import get_center_asym
 from util import collect_data_and_q, collect_conditions, collect_positions, get_condition, two_lorentz
@@ -16,6 +15,13 @@ from datastructure import LabelData
 
 # TODO: Storing refined lp
 class datamodel():
+    """ 
+    Data model that store all of the information from the input h5, labeled 
+    phase information, and refined lattice information.
+
+    It is based on pandas.DataFrame and self-defined LabelData object for labels
+    May combine them in the future
+    """
 
     def __init__(self):
         # Instantiate empty DataFrame so that manuvering through the empty UI
@@ -40,9 +46,9 @@ class datamodel():
         self.df_data["is_refined"] = [False for _ in range(self.size)]
 
         self.df = pd.DataFrame(self.df_data)
-        self.left_right_width = left_right_width_2024
+        self.left_right_width = left_right_width_2025
         self.labeldata = LabelData()
-        self.temperature_profile_year = "2024"
+        self.temperature_profile_year = "2025"
         self.temperature_profile_func_dict = temperature_profile_func_dict
         self.width_func_dict = width_func_dict
 
@@ -100,36 +106,20 @@ class datamodel():
         self.labeldata = LabelData()
 
     def clear_label_data(self):
+        """ Start a new label data. Used when reading new set of data """
         self.labeldata = LabelData()
 
-
+    ######## GET functions ###########
     def get_xaxis_size(self):
         return self.df['data'][self.ind].shape[1]
 
     def get_current_labeled_indices(self):
         return self.labeldata.get_labeled_indices(self.ind)
 
-    def set_current_center(self, center):
-        self.df.at[self.ind, "center_idx"] = center
-
-
     def get_cations(self):
         if hasattr(self, 'cations'):
             return self.cations
         return []
-
-
-    def update(self, ind):
-        self.ind = ind
-
-    def set_temp_profile_params_by_year(self, year):
-        if year not in temperature_profile_func_dict:
-            print("Year specified does not exist. This shouldn't happen.",
-                  "Please contact Ming!")
-            return
-        
-        self.temperature_profile_year = year
-
 
     def get_lps_update_dict(self):
         return {'refined_lps': [], 
@@ -139,64 +129,8 @@ class datamodel():
                 'width': [], 
                 'width_uncer': [] }
 
-
-    def update_ind(self, ind, data_dict):
-        for key, value in data_dict.items():
-            self.df.at[ind, key] = value
-
-
-    def update_refined_lp(self, ind, refined_lp):
-        self.df.at[ind, 'refined_lps'] = refined_lp
-        self.df.at[ind, 'is_refined'] = True
-
-
-    def update_refined_lp_uncer(self, ind, refined_lp_uncer):
-        self.df.at[ind, 'refined_lps_uncer'] = refined_lp_uncer
-
-
-    def update_refined_act(self, ind, act):
-        self.df.at[ind, 'act'] = act
-
-
-    def update_refined_act_uncer(self, ind, act_uncer):
-        self.df.at[ind, 'act_uncer'] = act_uncer
-
-
-    def update_refined_width(self, ind, width):
-        self.df.at[ind, 'width'] = width 
-
-
-    def update_refined_width_uncer(self, ind, width_uncer):
-        self.df.at[ind, 'width_uncer'] = width_uncer
-
-
-    def add_to_phase_diagram(self, phase_names):
-        if self.df['phases'][self._ind] != phase_names:
-            self.df.at[self._ind, 'phases'] = phase_names
-            self.df.at[self._ind, 'is_refined'] = False 
-
-
-    def remove_from_phase_diagram(self):
-        self.df.at[self._ind, 'phases'] = []
-        self.df.at[self._ind, 'is_refined'] = False 
-
-
-    def update_phases(self, phases): 
-        self.df['phases'] = phases
-
-
-    def is_refined(self, phase_name):
-        indices = self.get_index_with_phase(phase_name)
-        return np.all([self.df['is_refined'][ind] for ind in indices])
-
-
-    def __getitem__(self, ind):
-        return self.df.iloc[ind]
-
-
     def get_phases(self):
         return self.df['phases'].to_list()
-
 
     def get_all_phases(self):
         all_phases = set()
@@ -204,7 +138,6 @@ class datamodel():
             for phase in phase_ls:
                 all_phases.add(phase)
         return all_phases
-
 
     def get_dict_for_phase_diagram(self):
         phase_dict = {}
@@ -221,7 +154,6 @@ class datamodel():
 
         return phase_dict
         
-
     def get_dict_for_lp_plot(self, phase):
         indices = self.get_index_with_phase(phase)
         lp_dict = {}
@@ -241,49 +173,15 @@ class datamodel():
         lp_dict["width_uncer"] = self.df.loc[indices, 'width_uncer'].to_list()
         return lp_dict
 
-
-    def save_lp(self, filename, phase):
-        lp_dict = self.get_dict_for_lp_plot(phase)
-
-        with open(filename, 'w') as f:
-            json.dump(lp_dict, f)
-
-
-    def get_index_with_phase(self, phase):
-        if hasattr(self, 'df'):
-            return [i for i, p in enumerate(self.df['phases']) if phase in p]
-        return []
-
-    def get_labeled_phases(self, idx):
-        return [self.df['phases'][i] for i in idx]
-
-    def get_refined_lp_of_phase(self, phase_name):
-        indices = self.get_index_with_phase(phase_name)
-        phases_ls = self.get_labeled_phases(indices)
-        refined_lp = []
-
-        for i, phases in zip(indices, phases_ls):
-            for j, phase in enumerate(phases):
-                if phase_name == phase:
-                    refined_lp.append(self.refined_lps[i][j])
-
-        return refined_lp
-
-
-    def update_temp_profile_for_stored_labels(self):
-        # Go throgh labeled data, find the ones that belongs to 
-        for label in self.labeldata:
-            if label.sample_num == self.current_ind:
-                label.tpeak = self.temp_func(np.array(self.transform_data_idx_to_x(label.x_idx)))
-        
-
     def get_temp_profile_at(self, ind):
         """
         Returns xaxis, temperature function, and  center position (in data index)
         Temperature profile can be obtained by temp_func(xaxis)
         """
-        temp_func = self.temperature_profile_func_dict[self.temperature_profile_year](self.current_dwell,
-                                                                                      self.current_tpeak)
+        temp_func = self.temperature_profile_func_dict[self.temperature_profile_year](
+                              self.current_dwell,
+                              self.current_tpeak
+                    )
         width_func = self.width_func_dict[self.temperature_profile_year]
 
         center = self.df['center_idx'][ind]
@@ -360,6 +258,118 @@ class datamodel():
             else:
                 rc.append(None)
         return rc
+
+    def get_index_with_phase(self, phase):
+        if hasattr(self, 'df'):
+            return [i for i, p in enumerate(self.df['phases']) if phase in p]
+        return []
+
+    def get_labeled_phases(self, idx):
+        return [self.df['phases'][i] for i in idx]
+
+    def get_refined_lp_of_phase(self, phase_name):
+        indices = self.get_index_with_phase(phase_name)
+        phases_ls = self.get_labeled_phases(indices)
+        refined_lp = []
+
+        for i, phases in zip(indices, phases_ls):
+            for j, phase in enumerate(phases):
+                if phase_name == phase:
+                    refined_lp.append(self.refined_lps[i][j])
+
+        return refined_lp
+    ######## end of GET functions ###########
+
+
+    def update(self, ind):
+        self.ind = ind
+
+    def set_current_center(self, center):
+        self.df.at[self.ind, "center_idx"] = center
+
+    def set_temp_profile_params_by_year(self, year):
+        if year not in temperature_profile_func_dict:
+            print("Year specified does not exist. This shouldn't happen.",
+                  "Please contact Ming!")
+            return
+        
+        self.temperature_profile_year = year
+
+
+    ######### Update functinos ##############
+    def update_ind(self, ind, data_dict):
+        for key, value in data_dict.items():
+            self.df.at[ind, key] = value
+
+
+    def update_refined_lp(self, ind, refined_lp):
+        self.df.at[ind, 'refined_lps'] = refined_lp
+        self.df.at[ind, 'is_refined'] = True
+
+
+    def update_refined_lp_uncer(self, ind, refined_lp_uncer):
+        self.df.at[ind, 'refined_lps_uncer'] = refined_lp_uncer
+
+
+    def update_refined_act(self, ind, act):
+        self.df.at[ind, 'act'] = act
+
+
+    def update_refined_act_uncer(self, ind, act_uncer):
+        self.df.at[ind, 'act_uncer'] = act_uncer
+
+
+    def update_refined_width(self, ind, width):
+        self.df.at[ind, 'width'] = width 
+
+
+    def update_refined_width_uncer(self, ind, width_uncer):
+        self.df.at[ind, 'width_uncer'] = width_uncer
+
+
+    def add_to_phase_diagram(self, phase_names):
+        if self.df['phases'][self._ind] != phase_names:
+            self.df.at[self._ind, 'phases'] = phase_names
+            self.df.at[self._ind, 'is_refined'] = False 
+
+
+    def remove_from_phase_diagram(self):
+        self.df.at[self._ind, 'phases'] = []
+        self.df.at[self._ind, 'is_refined'] = False 
+
+
+    def update_phases(self, phases): 
+        self.df['phases'] = phases
+    ######### End of Update functinos ##############
+
+
+    def is_refined(self, phase_name):
+        indices = self.get_index_with_phase(phase_name)
+        return np.all([self.df['is_refined'][ind] for ind in indices])
+
+
+    def __getitem__(self, ind):
+        return self.df.iloc[ind]
+
+
+
+
+    def save_lp(self, filename, phase):
+        lp_dict = self.get_dict_for_lp_plot(phase)
+
+        with open(filename, 'w') as f:
+            json.dump(lp_dict, f)
+
+
+
+
+    def update_temp_profile_for_stored_labels(self):
+        # Go throgh labeled data, find the ones that belongs to 
+        for label in self.labeldata:
+            if label.sample_num == self.current_ind:
+                label.tpeak = self.temp_func(np.array(self.transform_data_idx_to_x(label.x_idx)))
+        
+
 
     def load_center_idx(self, center_idx):
         self.df['center_idx'] = [None for _ in range(self.size)]
@@ -451,7 +461,3 @@ class datamodel():
         _r = idx - _i
 
         return arr[_i] + (arr[_i+1] - arr[_i])*_r
-
-         
-
-

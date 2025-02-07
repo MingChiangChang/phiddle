@@ -15,6 +15,7 @@ from PyQt6.QtCore import pyqtSignal
 from util import (minmax_norm, minmax_denorm, COLORS, find_first_larger,
                   get_continue_patches, find_first_smaller)
 from pyPhaseLabel import evaluate_obj
+from setting import PlotSettings, HeatmapPlotSettings, set_plot
 
 
 # TODO: This need major refactoring and abstraction
@@ -24,10 +25,19 @@ from pyPhaseLabel import evaluate_obj
 # FIXME: Size mismatch after zoom-in and zoom-out
 
 class stripeview(FigureCanvasQTAgg):
+    """
+    Class that handles plotting and interaction of XRD heatmap and
+    XRD patterns
+
+    Signals:
+        heatmap_release(int, int)
+            emits the minimum and maximum x indices of the selected region
+    """
 
     heatmap_release = pyqtSignal(int, int)
 
     def __init__(self, parent=None):
+        """ Initialize graphs """
         fig = Figure()
         super(stripeview, self).__init__(fig)
         self.setParent = parent
@@ -35,8 +45,17 @@ class stripeview(FigureCanvasQTAgg):
         gs = fig.add_gridspec(3, 2)
         self.heatmap = fig.add_subplot(gs[:-1, 0])
         self.temp_profile = fig.add_subplot(gs[-1, 0])
+        self.temp_profile.set_box_aspect(1/2)
         self.spectra = fig.add_subplot(gs[:2, 1])
         self.stick_patterns = fig.add_subplot(gs[-1, 1])
+        self.heatmap_settings = HeatmapPlotSettings()
+        self.temp_settings = PlotSettings()
+        self.temp_settings.ylabel = "Tpeak ($^o$C)"
+        self.spectra_settings = PlotSettings("", "q ($nm^{-1}$)",
+                                             "Avg intensity (a.u.)",
+                                             0., 1.,
+                                             -0.3, 1.1)
+        self.stick_patterns_settings = PlotSettings()
 
         self.bottomY = -100
         self.topY = 100
@@ -63,6 +82,7 @@ class stripeview(FigureCanvasQTAgg):
     ######## Getters ########
     @property
     def box_x(self):
+        """ x positions of the selected box """
         return np.array([self.LeftX,
                          self.LeftX,
                          self.RightX,
@@ -71,6 +91,7 @@ class stripeview(FigureCanvasQTAgg):
 
     @property
     def temp_y(self):
+        """ y positions of the selected box in temperature plot """
         return np.array([self.temp_bottomY,
                          self.temp_topY,
                          self.temp_topY,
@@ -80,6 +101,7 @@ class stripeview(FigureCanvasQTAgg):
 
     @property
     def box_y(self):
+        """ x positions of the selected box """
         return np.array([self.bottomY,
                          self.topY,
                          self.topY,
@@ -88,6 +110,7 @@ class stripeview(FigureCanvasQTAgg):
 
     @property
     def spectra_box_x(self):
+        """ x positions of the selected box in xrd spectra plot """
         return np.array([self.spectra_left_x,
                          self.spectra_left_x,
                          self.spectra_right_x,
@@ -97,12 +120,12 @@ class stripeview(FigureCanvasQTAgg):
 
     @property
     def selected_temperature(self):
+        """ returns the temperatures that are in the selection box """
         r = self.get_selected_frames()
         x_pos = list(map(self.transform_data_idx_to_x, r))
         return self.temp_profile_func(np.array(x_pos))
 
     ###### END Getters ######
-
 
     def get_selected_frames(self):
         """ Includes the starting and ending frames """
@@ -119,6 +142,14 @@ class stripeview(FigureCanvasQTAgg):
             self.heatmap.set_title(self.get_title(self.t_left, self.t_right))
 
     def move(self, move_idx):
+        """
+        Move the plotting idx by move_idx. If a span is already selected, both
+        left and right of the span moves
+
+        Args:
+            move_idx: str
+                Amount the plotting index changes
+        """
         self.spectra_left_x = np.min(self.q)
         self.spectra_right_x = np.max(self.q)
 
@@ -163,7 +194,7 @@ class stripeview(FigureCanvasQTAgg):
         self.spectra.set_xlim((self.avg_q[0], self.avg_q[-1]))
 
         if self.fit_result is not None:
-            self.plot_scaled_results(_min, _max, q_min_ind, q_max_ind)
+            self.plot_scaled_results(_min, _max)
 
         self.spectra.set_ylim((-0.3, 1.1))
         self.spectra.set_ylabel("Avg intensity (a.u.)")
@@ -173,6 +204,10 @@ class stripeview(FigureCanvasQTAgg):
 
 
     def onclick(self, event):
+        """ 
+        Handles click events. First check which plot the click is on. Then update
+        the x, y positions for plotting the patch
+        """
 
         if event.inaxes in [self.heatmap]:
             self.LeftX = int(event.xdata)
@@ -202,15 +237,22 @@ class stripeview(FigureCanvasQTAgg):
 
 
     def is_moveless_right_click(self, event):
+        """ Detect moveless right click, which reset the scale of the plots"""
         return ((event.inaxes in [self.spectra])
                 and (event.button is MouseButton.RIGHT)
                 and (event.x == self._clicked_x))
 
 
     def onrelease(self, event):
-        # TODO: auto check phases that are within selected range
+        """
+        Handles all the replotting and updates once user releases the mouse click
+        Moveless right click: resets the scale of the XRD spectra plot
+        Right click and drag (release in XRD spectra): zoom in the XRD spectra
+        Left click and drag (release in XRD spectra): select subsection for XRD spectra
+        Left click and drag (release in heatmap): Take average of the selected region and 
+                                                  plot in XRD spectra
+        """
         if self.is_moveless_right_click(event):
-
             self.spectra.clear()
             self.spectra_left_x = np.min(self.q)
             self.spectra_right_x = np.max(self.q)
@@ -222,9 +264,7 @@ class stripeview(FigureCanvasQTAgg):
             if self.x_min_ind == self.x_max_ind:
                 self.avg_pattern = self.data[:, self.x_min_ind]
             else:
-                self.avg_pattern = np.mean(
-                        self.data[:, self.x_min_ind:self.x_max_ind], axis=1
-                        )
+                self.avg_pattern = np.mean(self.data[:, self.x_min_ind:self.x_max_ind], axis=1)
 
             if self.fit_result is not None:
                 self.plot_label_result_w_spectra()
@@ -239,7 +279,6 @@ class stripeview(FigureCanvasQTAgg):
             self.stick_patterns.clear()
             self.plot_cifs(self.sticks, (self.q[0], self.q[-1]))
             # self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
-
             self.draw()
             return
 
@@ -289,7 +328,7 @@ class stripeview(FigureCanvasQTAgg):
             self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
 
             if self.fit_result is not None:
-                self.plot_scaled_results(_min, _max, q_min_ind, q_max_ind)
+                self.plot_scaled_results(_min, _max)
             
             if event.button is MouseButton.LEFT:
                 self.spectra.set_xlim((self.q[0], self.q[-1]))
@@ -314,6 +353,7 @@ class stripeview(FigureCanvasQTAgg):
                 self.heatmap_release.emit(self.x_min_ind, self.x_max_ind)
 
     def onmotion(self, event):
+        """ Update the box/patch in the figure user is interactive with """
         if not self.moving:
             return
         if event.inaxes is None:
@@ -323,11 +363,11 @@ class stripeview(FigureCanvasQTAgg):
 
         if event.inaxes == self.heatmap:
             self.RightX = int(event.xdata)
-
             self.selection_box.set_xdata(self.box_x)
             self.temp_selection_box.set_xdata(self.box_x)
             self.selection_box.set_ydata(self.box_y)
             self.draw()
+            
         elif event.inaxes == self.spectra:
             self.topY = event.xdata
             self.spectra_right_x = event.xdata
@@ -338,6 +378,7 @@ class stripeview(FigureCanvasQTAgg):
             self.draw()
 
     def slider_moveto(self, data_idx_value):
+        """ Move the center indicator with the movement of the slider  """
         x = self.xaxis[data_idx_value]
         self.temp_selection_box.set_xdata([x])
         self.RightX = x
@@ -347,6 +388,7 @@ class stripeview(FigureCanvasQTAgg):
         self.draw()
 
     def clear_figures(self):
+        """ Reset heatmap, spectra figure and temperature profile figure"""
         self.heatmap.clear()
         self.spectra.clear()
         self.temp_profile.clear()
@@ -356,7 +398,16 @@ class stripeview(FigureCanvasQTAgg):
         self.RightX = 0
         self.topY = 100
 
-    def plot_scaled_results(self, _min, _max, q_min_ind, q_max_ind):
+    def plot_scaled_results(self, _min, _max):#, q_min_ind, q_max_ind):
+        """
+        Plot the rescaled result with the provided new min and max
+
+        Args:
+            _min: float
+                new minimum of the plot
+            _max: float
+                new maximum of the plot
+        """
         phase_names = list(self.fit_result)
         fit = np.sum(np.array([self.fit_result[phase_name] for phase_name in phase_names]), 
                      axis=0)
@@ -383,6 +434,15 @@ class stripeview(FigureCanvasQTAgg):
         self.spectra.plot(self.fitted_q, (res - .2), label="residual", c='grey')
 
     def replot_w_new_center(self, xaxis, temp_profile_func=None):
+        """ 
+        replot the with center provided by the passed in xaxis
+
+        Args:
+            xaxis: np.ndarray
+                x axis values
+            temp_profile_func: Optional[Function]
+                optional temperature profile function (for update)
+        """
         if temp_profile_func is not None:
             self.temp_profile_func = temp_profile_func
         self.heatmap.clear() # TODO: probably don't need to replot the heat map
@@ -420,13 +480,17 @@ class stripeview(FigureCanvasQTAgg):
         self.draw()
 
     def replot_heatmap(self, xaxis=None, temp_profile_func=None):
+        """
+        Replot the heatmap with currently stored data.
+        Mostly for updating what is overlayed on top of it
+        """
+
         if temp_profile_func is not None:
             self.temp_profile_func = temp_profile_func
         if xaxis is not None:
             self.xaxis = xaxis
 
         self.heatmap.clear()
-
 
         (self.selection_box, ) = self.heatmap.plot(self.box_x, self.box_y, color='r')
         self.heatmap.imshow(self.data,
@@ -438,13 +502,19 @@ class stripeview(FigureCanvasQTAgg):
         self.heatmap.set_xticks([])
         self.heatmap.set_ylabel("q ($nm^{-1}$)")
 
-
         self.aspan = self.heatmap.axvspan(
             self.LeftX, self.RightX, color='k', alpha=0)
         self.draw()
 
 
     def plot_label_progress(self, labeled_indices):
+        """ 
+        Plot a tiny green patch at the bottom of the heatmap for locations that 
+        have been labeled 
+        Args:
+            labeled_indices: List[int]
+                indices in the heatmap that is labeled
+        """
         height = self.q[-10]-self.q[-1] 
         start_width_ls = get_continue_patches(labeled_indices)
         if not start_width_ls: return 
@@ -497,10 +567,7 @@ class stripeview(FigureCanvasQTAgg):
         (self.selection_box, ) = self.heatmap.plot(self.box_x, self.box_y, color='r')
         (self.temp_selection_box, ) = self.temp_profile.plot(self.box_x, self.temp_y, color='r') 
 
-        if len(xaxis) == 1:
-            xspan = 1
-        else:
-            xspan = xaxis[-1]-xaxis[0]
+        xspan = max(1, xaxis[-1] - xaxis[0])
 
         std = np.std(self.data) 
         median = np.median(self.data)
@@ -514,7 +581,7 @@ class stripeview(FigureCanvasQTAgg):
         self.heatmap.set_ylabel("q ($nm^{-1}$)")
 
         self.temp_profile.plot(xaxis, temp_profile_func(xaxis))
-        self.temp_profile.set_box_aspect(1/2)
+        # self.temp_profile.set_box_aspect(1/2)
         self.temp_profile.set_xlabel(xlabel)
         self.temp_profile.set_ylabel("Tpeak ($^o$C)")
         self.temp_profile.set_xlim(np.min(xaxis), np.max(xaxis))
@@ -541,6 +608,7 @@ class stripeview(FigureCanvasQTAgg):
         self.draw()
 
     def plot_fit_result(self):
+        """ Plot the fitting result store in self """
         phase_names = list(self.fit_result)
         fit = np.sum(np.array([self.fit_result[phase_name] for phase_name in phase_names]), 
                      axis=0)
@@ -556,6 +624,11 @@ class stripeview(FigureCanvasQTAgg):
 
         self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_names)) + f" {self.confidence:.4f}")
         self.spectra.legend(fontsize=7, loc="upper right")
+        # FIXME: spectra settings
+        # self.spectra_settings.xmin = self.q[0]
+        # self.spectra_settings.xmax = self.q[-1]
+        # set_plot(self.spectra, self.spectra_settings)
+
         self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.spectra.set_ylim((-0.3, 1.1))
         self.spectra.set_xlabel("q ($nm^{-1}$)")
@@ -565,8 +638,9 @@ class stripeview(FigureCanvasQTAgg):
 
         self.draw()
 
-    # FIXME: Try to allow "next label result" while zoomed in
+    # FIXME: Allow "next label result" while zoomed in
     def plot_n_store_label_result_w_spectra(self, ind, confidence, fit_result, bg=None):
+        """ Store in labeling result in self and plot """
         self.fitted_q = deepcopy(self.avg_q)
         self.fitted_pattern, self._min, self._max = minmax_norm(self.avg_pattern)
         self.ind = ind
@@ -577,6 +651,7 @@ class stripeview(FigureCanvasQTAgg):
         self.plot_label_result_w_spectra()
 
     def plot_label_result_w_spectra(self):
+        """ plot both spectra and fit result """
         self.spectra.clear()
 
         if self.avg_pattern is None:
@@ -595,7 +670,12 @@ class stripeview(FigureCanvasQTAgg):
 
     def plot_cifs(self, sticks, q_range=None):
         """
-        stick_patterns: dictionary: {phase: [q, peak_height]}
+        Plot the stick patterns of phases
+        Args:
+            stick_patterns: dict
+                {phase: [q, peak_height]}
+            q_range: Tuple(float, float)
+                specifies minimum and maximum q range
         """
         if sticks is None:
             return
@@ -630,21 +710,34 @@ class stripeview(FigureCanvasQTAgg):
         self.draw()
 
     def get_patches(self, qs, Is, color):
+        """
+        Produce patchs with  
+        Args:
+            qs: iterator
+                1D array/list q vector
+            Is: iterator
+                1D array/list intensity
+        Return:
+            PatchCollection
+        """
         boxes = [Rectangle((q - 0.1, 0), .2, I)
                  for q, I in zip(qs, Is)]
         pc = PatchCollection(boxes, facecolor=color, alpha=1.)
         return pc
 
     def get_legend_proxy(self, color, phase_name):
+        """ Use this to fake legend signs """
         return mlines.Line2D([], [], marker="_", linewidth=1, color=color,
                              markersize=15, label=phase_name)
 
 
     def get_tpeak_dwell_from_cond(self, cond):
+        """ Helper function to get tpeak and dwell from conditions """
         s = cond.split('_')
         return float(s[3]), float(s[1])
 
-    def get_title(self, t_left, t_right=None): # Sloppy probably should get from Model
+    def get_title(self, t_left, t_right=None): # FIXME:Sloppy,  probably should get from Model
+        """ Get the title for spectra figure """
 
         title = f"Tpeak: {int(self.tpeak)}C Dwell: {int(self.dwell)}us" 
         if t_right is None:
@@ -664,7 +757,8 @@ class stripeview(FigureCanvasQTAgg):
         return title
 
 
-    def get_file_name(self): # Sloppy probably should get from Model
+    def get_file_name(self): # FIXME:Sloppy,  probably should get from Model
+        """ Get default file name for storing spectra """
 
         filename = f"tau_{int(self.dwell)}us_" 
 
@@ -683,6 +777,12 @@ class stripeview(FigureCanvasQTAgg):
         return filename
 
     def get_temperature(self, x_idx):
+        """ 
+        Get ther temperature 
+        Args:
+            x_idx: int
+                x index value
+        """
         # x_idx has different meaning depending on xx
         _x_idx = np.array(x_idx)
         if self.xx is not None:
@@ -691,22 +791,49 @@ class stripeview(FigureCanvasQTAgg):
 
 
     def transform_x_to_data_idx(self, x):
+        """ 
+        helper function to transform between different x axis
+        matplotlib uses x values but when accessing data, we need to transform
+        that into the data axis 
+
+        args:
+            x: int
+                matplotlib x axis value
+        return:
+            int: corresponding data x axis value
+        """
         data_idx = int(x/len(self.xaxis) * self.data.shape[1])
         if data_idx >= self.data.shape[1]:
             return self.data.shape[1]-1
         return max(0, data_idx)
 
+    def transform_data_idx_to_x(self, x):
+        """ 
+        helper function to transform between different x axis
+        args:
+            x: int
+                data x axis value
+        return:
+            int: corresponding matplotlib x axis value
+        """
+        return int(self.xaxis[0] + x / self.data.shape[1] * len(self.xaxis))
 
     def transform_real_x_to_data_x(self, x):
         return x/len(self.xaxis) * self.data.shape[1]
-
-    def transform_data_idx_to_x(self, x):
-        return int(self.xaxis[0] + x / self.data.shape[1] * len(self.xaxis))
 
     def get_unit_length_x(self):
         return  len(self.xaxis) / self.data.shape[1]
 
     def check_bounds(self, *args):
+        """
+        make every element in args to be with in (0, data.shape[1]-1)
+
+        args:
+            *args: multiple element that should be put in range
+        return:
+            list that contains elements in range
+        """
+
         r = []
         for a in args:
             if a >= self.data.shape[1]-1:
@@ -716,31 +843,44 @@ class stripeview(FigureCanvasQTAgg):
         return r
 
     def rescale(self, d, _min, _max):
+        """ Inverse of min max normalization"""
         d = minmax_denorm(d, self._min, self._max)
         return  (d - _min) / _max
 
-    def renormalize_stick_in_range(self, qmin, qmax):
-        if self.sticks is None:
-            return 
+    # def renormalize_stick_in_range(self, qmin, qmax):
+    #     """ 
+    #     Select the sticks that lies between (qmin, qmax) and normalized to have
+    #     max of 1 in intensity for each phase
 
-        rs = {} # deepcopy(self.sticks)
+    #     args:
+    #         qmin, qmax: float
+    #     return:
+    #         dict containing
 
-        for phase in self.sticks:
-            sticks = rs[phase]
-            _q = sticks[:, 0] 
+    #     """
+    #     if self.sticks is None:
+    #         return 
 
-            mask = np.logical_and(_q >= qmin, _q <= qmax)
-            _q = _q[mask]
-            _I = sticks[mask, 1]
-            if len(_q) != 0:
-                _I /= np.max(_I)
+    #     rs = {} # deepcopy(self.sticks)
 
-            rs[phase] = np.vstack((_q, _I)).T
+    #     for phase in self.sticks:
+    #         sticks = rs[phase]
+    #         _q = sticks[:, 0] 
 
-        return rs
+    #         mask = np.logical_and(_q >= qmin, _q <= qmax)
+    #         _q = _q[mask]
+    #         _I = sticks[mask, 1]
+    #         if len(_q) != 0:
+    #             _I /= np.max(_I)
+
+    #         rs[phase] = np.vstack((_q, _I)).T
+
+    #     return rs
             
     def plot_xrd(self):
-        # Basic replot; assuming nothing changes and everything is read from current state
+        """
+        Basic replot; assuming nothing changes and everything is read from current state
+        """
         self.spectra.clear()
         (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
 
@@ -758,7 +898,7 @@ class stripeview(FigureCanvasQTAgg):
         self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
 
         if self.fit_result is not None:
-            self.plot_scaled_results(_min, _max, q_min_ind, q_max_ind)
+            self.plot_scaled_results(_min, _max)#, q_min_ind, q_max_ind)
         
         self.spectra.set_xlim((self.q[0], self.q[-1]))
         self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
@@ -768,3 +908,57 @@ class stripeview(FigureCanvasQTAgg):
         self.spectra.set_ylabel("Avg intensity (a.u.)")
         self.spectra.legend(fontsize=7, loc="upper right")
         self.draw()
+
+    def get_heatmap_fig_info(self):
+        """ 
+        Get current heatmap figure information and return as dictionary
+        info included:
+            ["title", "xmin", "xmax", "ymin", "ymax", "xlabel", "ylabel"]
+        """
+
+        info = {}
+        info["title"] = self.heatmap.get_title()
+        xmin, xmax = self.heatmap.get_xlim()
+        ymin, ymax = self.heatmap.get_ylim()
+        info["xmin"] = xmin
+        info["xmax"] = xmax
+        info["ymin"] = ymin
+        info["ymax"] = ymax
+        info["xlabel"] = self.heatmap.get_xlabel()
+        info["ylabel"] = self.heatmap.get_ylabel()
+
+        return info
+
+    def set_heatmap_params(self, title: str, xmin: float, xmax: float, xlabel: str,
+                           ymin: float, ymax: float, ylabel: str):
+        """
+        Set heatmap parameters
+        args:
+            title: str
+            xmin: float
+            xmax: float
+            xlabel: str
+            ymin: float
+            ymax: float
+            ylabel: str
+        """
+        self.heatmap.set_title(title)
+        self.heatmap.set_xlim(xmin, xmax)
+        self.heatmap.set_ylim(ymin, ymax)
+        self.heatmap.set_xlabel(xlabel)
+        self.heatmap.set_ylabel(ylabel)
+        self.draw()
+
+    def set_qrange(self, qmin:float, qmax:float):
+        """ 
+        set q range of spectra
+        args:
+            qmin: float
+            qmax: float
+        """
+        self.spectra.set_xlim(qmin, qmax)
+        self.draw()
+
+    def get_qrange(self):
+        """ get q range of spectra"""
+        return self.spectra.get_xlim()

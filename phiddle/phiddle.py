@@ -3,6 +3,7 @@ import sys
 import traceback
 import json
 import logging
+import argparse
 
 import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
@@ -24,23 +25,24 @@ from label_api import labeler
 from cif_view import CIFView
 from phase_diagram import PhaseDiagramView, PhaseDiagramList
 from lattice_param_view import LatticeParamView, LatticeParamList
-from popup import Popup
+from popup import Popup, SetupPopup
 from cif_to_input_file import cif_to_input
 from center_finder_asym import get_center_asym
 
 # TODO: Better error handling, mostly for loading file
 # TODO: Stripeview should update once the new center is Set
-# FIXME: Moving left and right gives inconsistent temperature readings
-#        What is the temperature that actually get written? Should be the one showing on screen
 # FIXME: Remove from phase diagram does not remove the "labeled" label in model 
 # TODO: The sliding bar should start at where the center is
 # TODO: Add relative x position in stripe view figure title
 # TODO: Add spawn thread when trying to label or update model
 # TODO: Button to update all labels to currently selected temperature profile
-
+# TODO: Need a global replot button so when some settings got updated, 
+# TODO: A setting class that is linked to a setting window
+# TODO: Setup shell commend in windows
 
 
 class TopLevelWindow(QtWidgets.QMainWindow):
+    """ The main window of phiddle """
 
     def __init__(self,
                  h5_path=None,
@@ -51,6 +53,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.logger = logging.getLogger(__name__)
         self.stripeview = stripeview()
         self.globalview = globalview()
+        self.load_fn = ""
         self.h5_path = h5_path
         self.csv_path = csv_path
         self.model = datamodel()
@@ -62,17 +65,16 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.center_slider = QSlider(orientation=QtCore.Qt.Orientation.Horizontal)
         self.center_slider.valueChanged.connect(self.user_moved_slider)
         self.popup = Popup()
+        self.setuppopup = SetupPopup()
 
         # spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        # For testing
-        if h5_path is not None and csv_path is not None:
+        if h5_path:
             self.model.read_h5(h5_path)
             self.ind = 0
             self._update(self.ind)
+        if csv_path:
             self.labeler.read_csv(csv_path)
             self.cifview.update_cif_list(self.labeler.phase_names)
-            # [phase.name for phase in self.labeler.phases])
 
         self.phase_diagram_view = PhaseDiagramView()
         self.phase_diagram_list = PhaseDiagramList()
@@ -108,6 +110,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.lattice_param_list.axes_signal.connect(self.lattice_param_view.change_axes)
 
         self.popup.set_clicked.connect(self.update_params)
+        self.setuppopup.signal_to_heatmap_view.connect(self.stripeview.set_heatmap_params)
+        self.setuppopup.signal_to_condition_view.connect(self.update_params)
+        self.setuppopup.signal_to_qrange.connect(self.stripeview.set_qrange)
 
         label_button = QPushButton()
         label_button.setText("Label")
@@ -145,6 +150,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         labeler_setting_button.setText("Labeler Settings")
         labeler_setting_button.clicked.connect(self.labeler_setting_clicked)
 
+        setup_setting_button = QPushButton()
+        setup_setting_button.setText("Plot Settings")
+        setup_setting_button.clicked.connect(self.plot_setting_clicked)
+
         previous_label_result_button = QPushButton()
         previous_label_result_button.setText("Previous Label Result")
         previous_label_result_button.clicked.connect(
@@ -159,6 +168,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         top_button_layout.addWidget(self.center_slider, stretch=1)
         top_button_layout.addWidget(set_center_button, stretch=1)
         top_button_layout.addWidget(labeler_setting_button, stretch=1)
+        top_button_layout.addWidget(setup_setting_button, stretch=1)
         top_button_layout.addWidget(previous_label_result_button, stretch=1)
         top_button_layout.addWidget(next_label_result_button, stretch=1)
 
@@ -199,6 +209,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def _createMenuBar(self):
+        """ Create menubar """
         menuBar = self.menuBar()
         fileMenu = QMenu(" &File", self)
         browse_data_file_act = QtGui.QAction("Browse Data File", self)
@@ -226,7 +237,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         helpMenu = menuBar.addMenu(" &Help")
         helpMenu.addAction("test")
 
+
     def browse_button_clicked(self):
+        """ Browse h5 file paths. Load if a h5 exists """
         self.h5_path, _ = QFileDialog.getOpenFileName(None, "Open h5", "", "")
         if self.h5_path.endswith("h5"):
             self.model.read_h5(self.h5_path)
@@ -252,6 +265,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def browse_csv_button_clicked(self):
+        """ Browse csv. Load if proper csv is selected. """
         self.csv_path, _ = QFileDialog.getOpenFileName(
                                  None, "Open csv", "", "CSV Files (*.csv)"
                                  )
@@ -261,6 +275,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 # [phase.name for phase in self.labeler.phases])
 
     def browse_cif_button_clicked(self):
+        """
+        Browse cif file(s) and simulate their XRD and store information in csv file
+        Prompt popup windows will show up
+        """
         self.cif_paths, _ = QFileDialog.getOpenFileNames(
             None, "Open cifs", "", "")
         if not self.cif_paths:
@@ -276,6 +294,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             #    [phase.name for phase in self.labeler.phases])
 
     def save_progress_clicked(self):
+        """
+        Save the current label process in json and can be later loaded by opening with
+        the -j flag or "Load Progress" option in the GUI
+        """
         self.save_fn, _ = QFileDialog.getSaveFileName(
             self, 'Save File', "", "JSON Files (*.json)")
 
@@ -297,14 +319,27 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def load_progress_clicked(self):
+        """ Load the label process stored in json """
         # TODO: All load/browse button, if run successfully, should be updating all tabs
-        self.load_fn, _ = QFileDialog.getOpenFileName( None, "Open", "", "JSON Files (*.json)")
+        load_fn, _ = QFileDialog.getOpenFileName( None, "Open", "", "JSON Files (*.json)")
 
-        if not self.load_fn:
+        if not load_fn:
             self.logger.error(f'ERROR: File in .json not found! Check if you have moved you file around')
+            return
 
+        self.load(load_fn)
+
+    def load(self, load_fn=None):
+        """ load progress from json. Everything will be setup """
+        if load_fn is None:
+            return
+        self.load_fn = load_fn
         with open(self.load_fn, 'r') as f:
             meta_data = json.load(f)
+
+
+        print(os.path.isfile(meta_data["h5_path"]))
+        print(os.path.isfile(meta_data["csv_path"]))
 
         if (os.path.isfile(meta_data["h5_path"])
                 and os.path.isfile(meta_data["csv_path"])):
@@ -339,13 +374,40 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def labeler_setting_clicked(self):
+        """ show the setting popup window """
         self.popup.set_default_text(*self.labeler.params)
         self.popup.show()
 
+
+    def plot_setting_clicked(self):
+        """ show the plot setting popup window """
+        heatmap_info = self.stripeview.get_heatmap_fig_info()
+        qmin, qmax = self.stripeview.get_qrange()
+        condition_info = self.globalview.get_condition_info()
+        self.setuppopup.set_default_text(heatmap_info["title"],
+                                         heatmap_info["xmin"],
+                                         heatmap_info["xmax"],
+                                         heatmap_info["xlabel"],
+                                         heatmap_info["ymin"],
+                                         heatmap_info["ymax"],
+                                         heatmap_info["ylabel"],
+                                         condition_info["xmin"],
+                                         condition_info["xmax"],
+                                         condition_info["xlabel"],
+                                         condition_info["ymin"],
+                                         condition_info["ymax"],
+                                         condition_info["ylabel"],
+                                         qmin, qmax)
+        self.setuppopup.show()
+
     def _update(self, ind):
+        """ change the index of the stripe showing in the GUI """
         self.ind = ind
 
     def update_sticks(self, isChecked_list):
+        """
+        Scan the check box for phases and plot the stick patterns for those that are checked
+        """
         phases = {}
         for idx, checked in enumerate(isChecked_list):
             if checked:
@@ -361,13 +423,14 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.stripeview.plot_cifs(phases)
 
     def update_tab(self, tab_num):
+        """ Changing tabs shown in phiddle  """
         if tab_num == 1:
             self.update_pd_plot()
         if tab_num == 2:
             self.update_lp_tab()
 
     def update_pd_plot(self, phase_list=None):
-
+        """ update the phase diagram plot and list before showing """
         # TODO: have a check box for full or center phase ploting
         phase_dict = self.model.get_dict_for_phase_diagram()
         phase_dict_full = self.model.labeldata.get_dict_for_phase_diagram()
@@ -393,9 +456,9 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.phase_diagram_view.plot(phase_dict,
                                      self.phase_diagram_list.get_current_axes(),
                                      phase_list, plot_convex_hull)
-    ###################################
 
     def update_lp_tab(self):
+        """ update the lattice paramter view and list before showing """
         phase_dict = self.model.get_dict_for_phase_diagram()
         # self.lattice_param_view.plot_defualt(phase_dict,
         #                                 self.lattice_param_list.get_current_axes())
@@ -408,6 +471,14 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.lattice_param_list.update_phase_combo_box(phase_names)
 
     def lp_phase_changed(self, phase):
+        """ 
+        When the phase is selected in lattice parameter view,
+        The top window will do the work to collect data from the model and send
+        it to the lattice parameter view to plot
+
+        Args:
+            phase: str = phase name to be plotted
+        """
         if phase == "":
             return
 
@@ -424,22 +495,24 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 center = data["center_idx"]
                 if center is None:
                     _, _, center = self.model.get_temp_profile_at(ind)
-                y, _, _ = minmax_norm(data['data'][:, center])
+                y, _, _ = minmax_norm(data['data'][:, int(center)])
 
                 res, uncer = self.labeler.fit_phases(data['q'], y, phases)
 
-                for j, cp in enumerate(res.CPs):
+                for j, cp in enumerate(res["CPs"]):
                     data_dict['refined_lps'].append(
-                            [cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ]
+                            [cp["cl"]["a"], cp["cl"]["b"], cp["cl"]["c"],
+                             cp["cl"]["α"], cp["cl"]["β"], cp["cl"]["γ"]]
                             )
                     data_dict['refined_lps_uncer'].append(uncer[j*8:j*8+6].tolist())
-                    data_dict['act'].append(cp.act)
+                    data_dict['act'].append(cp["act"])
                     data_dict['act_uncer'].append(uncer[j*8+6])
-                    data_dict['width'].append(cp.σ)
+                    data_dict['width'].append(cp["σ"])
                     data_dict['width_uncer'].append(uncer[j*8+7])
-                    if cp.name == phase:
+                    if cp["name"] == phase:
                         refined_result_for_plot.append(
-                             [cp.cl.a, cp.cl.b, cp.cl.c, cp.cl.α, cp.cl.β, cp.cl.γ]
+                            [cp["cl"]["a"], cp["cl"]["b"], cp["cl"]["c"],
+                             cp["cl"]["α"], cp["cl"]["β"], cp["cl"]["γ"]]
                              )
                 
                 self.model.update_ind(ind, data_dict)
@@ -449,33 +522,50 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.lattice_param_view.plot(lp_dict, self.lattice_param_list.get_current_axes())
             
     def save_lp_diagram(self):
+        """ Save the lattice paramter diagram figure """
         fn, _ = QFileDialog.getSaveFileName(
             self, 'Save Lattice Parameter Diagram', "", "")
         self.lattice_param_view.save_digram(fn)
 
 
-
     def save_lp(self, phase_name):
+        """ 
+        Save the lattice paramters 
+        Args:
+            phase_name: str = name of the phase that will be saved
+        """
         fn, _ = QFileDialog.getSaveFileName(
             self, 'Save Lattice Parameter', remove_back_slash(phase_name), "")
         self.model.save_lp(fn, phase_name)
 
 
 
-    def update_lp_plot(self, mask):
+    def update_lp_plot(self):
+        """
+        Update the lattice paramter plot
+        """
         phase_dict = self.model.get_dict_for_phase_diagram()
-        self.lattice_param_view.plot(phase_dict,
-                                     self.phase_diagram_list.get_current_axes(),
-                                     mask)
-
+        self.lattice_param_view.plot(
+                phase_dict,
+                self.phase_diagram_list.get_current_axes()
+            )
+        # mask)
 
 
     def label_button_clicked(self):
-        self.labeler.fit(self.stripeview.avg_q, self.stripeview.avg_pattern)
+        """
+        Label the XRD pattern with all phases taken into considerations 
+        Will show the fitted pattern in stripeview
+        """
+        self.labeler.label(self.stripeview.avg_q, self.stripeview.avg_pattern)
         self.stripeview.plot_n_store_label_result_w_spectra(
             1, self.labeler.probs[0], self.labeler.fit_result, self.labeler.bg)
 
     def fit_w_phase_button_clicked(self):
+        """
+        Fit the XRD pattern with user-selected sets of phases
+        Will show the fitted pattern in stripeview
+        """
         selected_phase_names = self.cifview.get_checked_phase_names()
         if selected_phase_names:
             self.labeler.fit_phases(self.stripeview.avg_q,
@@ -485,9 +575,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 1, self.labeler.probs[0], self.labeler.fit_result, self.labeler.bg)
 
     def label_w_phase_button_clicked(self):
+        """
+        Label the XRD pattern with user-selected sets of phases
+        Will show the fitted pattern in stripeview
+        """
         selected_phase_names = self.cifview.get_checked_phase_names()
         if selected_phase_names:
-            self.labeler.fit(self.stripeview.avg_q,
+            self.labeler.label(self.stripeview.avg_q,
                                     self.stripeview.avg_pattern,
                                     selected_phase_names)
             self.stripeview.plot_n_store_label_result_w_spectra(
@@ -495,6 +589,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def save_residual(self):
+        """ Save the residual patterns of the fit  """
         if not self.labeler.has_labeled:
             self.save_button_clicked()
             return
@@ -508,6 +603,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             np.save(fn, d)
 
     def save_button_clicked(self):
+        """ 
+        Save the patterns, and the fit data into file format
+        designated by the user input extension
+        """
         filename = self.stripeview.get_file_name() # self.model.current_filename
         d = np.vstack((self.stripeview.avg_q, self.stripeview.avg_pattern))
         fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
@@ -522,12 +621,19 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             else:
                 np.save(fn, d)
 
-
     def change_ind(self, change):
+        """ Use to jump serveral indices """
         self.ind += change
 
-
     def add_to_phase_diagram(self, phase_names):
+        """ 
+        Attach the currently selected phases to the current pattern
+        (correspond to specific condition and xrd index)
+
+        Args:
+            phase_names: List[str]
+               list of phase name to be added 
+        """
         x_indices = self.stripeview.get_selected_frames()
         if int(np.round(self.model.current_center)) in x_indices:
             self.model.add_to_phase_diagram(phase_names)
@@ -547,6 +653,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
 
     def remove_from_phase_diagram(self):
+        """ 
+        Remove the labels currently attach to the current pattern
+        (correspond to specific condition and xrd index)
+        """
         x_indices = self.stripeview.get_selected_frames()
 
         if self.model.current_center in x_indices:
@@ -564,6 +674,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
     def update_params(self, std_noise, mean, std, max_phase,
                       expand_degree, background_length, max_iter,
                       optimize_mode, background_option, year):
+        """ Update parameters stored in the labeler """
         
         self.labeler.set_hyperparams(std_noise, mean, std, max_phase,
                                      expand_degree, background_length,
@@ -573,33 +684,26 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.stripeview.replot_w_new_center(xaxis, temp_profile_func)
          
     def update_checked_cif_list(self, x_min_ind, x_max_ind):
+        """
+        Collect all of the labeled phases in the selected region
+        check the check boxes
+        """
         phases = self.model.get_current_phases_bw_x_range(x_min_ind, x_max_ind+1)
         if phases: 
             self.cifview.set_checked_phase_names(phases)
 
 
     def next_label_result(self):
+        """ Show the next (less probably) label result """
         if self.labeler.has_labeled:
             ind, confidence, result, fractions, bg = self.labeler.next_label_result()
             self.stripeview.plot_n_store_label_result_w_spectra(
                        ind, confidence, result, bg
                     )
             self.labeler.print_current_CPs()
-            # print("############## Output ################")
-            # print("")
-            # print(f"{ind}th most probable result")
-            # print(result.CPs)
-            # print("")
-            # print("Probability: {confidence}")
-            # print("Fractions:")
-            # for i, xi  in enumerate(fractions):
-            #     print(f"    {result.CPs[i].name}: {xi}")
-            # print("")
-            # print("#####################################")
-
-            
 
     def previous_label_result(self):
+        """ Show the previous (more probably) label result """
         if self.labeler.has_labeled:
             ind, confidence, result, fractions, bg =\
                        self.labeler.previous_label_result()
@@ -608,26 +712,25 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 )
             self.labeler.print_current_CPs()
 
-            # print("############## Output ################")
-            # print("")
-            # print(f"{ind}th most probable result")
-            # print(result.CPs)
-            # print("")
-            # print(f"Probability: {confidence}")
-            # print("Fractions:")
-            # for i, xi  in enumerate(fractions):
-            #     print(f"    {result.CPs[i].name}: {xi}")
-            # print("")
-            # print("#####################################")
-
     @property
     def ind(self):
         return self._ind
 
     @ind.setter
     def ind(self, new_ind):
+        """ 
+        Include all the update that the GUI should do when the index of the stripe
+        is changed
+
+        1. update indices in the model
+        2. Reset cahced avg pattern 
+        3. replot temperature profile, heatmap and XRD pattern
+        4. reset center_slider
+        5. Update global view to properly show the currently chosen point
+        6. Update the check box to show currently labeled phases (if any) 
+
+        """
         # All the update and setups that has to be done when switching samples is in there
-        # A little bit too hidden
         if new_ind >= self.model.size:
             new_ind = 0
         elif new_ind < 0:
@@ -677,11 +780,13 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             pass
 
     def user_moved_slider(self, value):
+        """ Make vertical bar heatmap move with the slider """
         self.stripeview.slider_moveto(value) 
         self.stripeview.plot_xrd()
         # self.stripeview.update_temp_profile(value)
 
     def set_center(self):
+        """ Set the center of current heatmap and store in the model  """
         c = self.stripeview.transform_real_x_to_data_x(self.center_slider.value())
         self.model.set_current_center(c)
         xaxis = self.model.get_current_xaxis()
@@ -693,7 +798,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.stripeview.plot_label_progress(labeled_indices)
 
     def closeEvent(self, event):
-        # Ask for confirmation before closing
+        """ Ask for confirmation before closing """
         confirmation = QMessageBox.question(self, "Confirmation",
               "Do you want to save current progress before closing?",
               QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
@@ -707,6 +812,15 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             event.ignore()  #
 
     def keyPressEvent(self, event):
+        """ 
+        Handles key press event.
+
+        'd' and right arrow key will move 1 right of the XRD pattern 
+        'a' and left arrow key will move 1 left of the XRD pattern 
+
+        'D' moves to the next stripe
+        'A' moves to the previous stripe
+        """
         if event.key() == QtCore.Qt.Key.Key_Left or event.text() == 'a' :
             self.stripeview.move(-1); return 
         if event.key() == QtCore.Qt.Key.Key_Right or event.text() == 'd':
@@ -717,8 +831,21 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.change_ind(1); return
 
 def error_handler(etype, value, tb):
+    """ 
+    the catch all error handler. This is the temperary solution for now.
+    Should implement proper error handling in the future
+    """
     error_msg = ''.join(traceback.format_exception(etype, value, tb))
     print(error_msg)
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-j', '--json', type=str, required=False, help="JSON progress file to load upon start up")
+    parser.add_argument('-h5', '--h5', type=str, required=False, default="", help="Preload h5 files")
+    parser.add_argument('-c', '--csv', type=str, required=False, default="", help="Preload csv files")
+
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
@@ -727,7 +854,12 @@ if __name__ == "__main__":
 
     w = 1920
     h = 1080
-    window = TopLevelWindow()
+
+    args = parse_args()
+    window = TopLevelWindow(args.h5, args.csv)
+    if args.json:
+        window.load(args.json)
+    
     window.resize(w, h)
     window.show()
 

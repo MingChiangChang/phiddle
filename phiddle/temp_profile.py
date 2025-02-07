@@ -1,11 +1,10 @@
 import numpy as np
-from matplotlib import pyplot as plt
-from scipy.optimize import leastsq
 from util import two_lorentz, oned_gaussian_func
 
 #Version 1.2, used since Feb 7 2024 at 21:24
 
 temperature_profile_func_dict = {
+        "2025": lambda dwell, tpeak: two_lorentz(tpeak, 0., *left_right_width_2025(dwell, tpeak)),
         "2024": lambda dwell, tpeak: two_lorentz(tpeak, 0., *left_right_width_2024(dwell, tpeak)), 
         "2023": lambda dwell, tpeak: two_lorentz(tpeak, 0., *left_right_width_2023(dwell, tpeak)),
         "2021": lambda dwell, tpeak: oned_gaussian_func(tpeak, 0.,
@@ -13,10 +12,13 @@ temperature_profile_func_dict = {
         }
 
 width_func_dict = {
+        "2025": lambda dwell, tpeak: left_right_width_2025(dwell, tpeak), 
         "2024": lambda dwell, tpeak: left_right_width_2024(dwell, tpeak), 
         "2023": lambda dwell, tpeak: left_right_width_2023(dwell, tpeak),
         "2021": lambda dwell, tpeak: sigma_Fall2021(dwell, LaserPowerMing_Fall2021(dwell, tpeak))
         }
+
+# Surface functions
 def temp_surface_func(b, c, d, e, f):
     return lambda x, y: (b*x+c)*(y)**(d*x**2+e*x+f) + 27
 
@@ -29,9 +31,55 @@ def twod_surface(base, a, b, c, d, e):
 def cubic_surface(base, a, b, c, d, e, f, g):
     return lambda x, y: base + a*x + b*y + c*x**2 + d*y**2 + e*x*y + f*x**4 + g*y**4
 
+############## Year 2025 ##################
+def left_right_width_2025(tau, Temp):
+    left_width_fit =  [ 5.02794524e+02,
+                       2.27809447e+02,
+                       -1.33599129e+01,
+                       -8.12411230e+01,
+                       1.76867367e-01,
+                       -1.65872055e+00,
+                       4.51417474e+00,
+                       -5.67899883e-06]
+    right_width_fit = [ 9.00132242e+02,
+                       -1.60851951e+02,
+                       -9.78194951e+00,
+                       3.82337277e+01,
+                       -4.75956003e-02,
+                       2.49843621e+00]
+
+    left_width = cubic_surface(*left_width_fit) 
+    right_width = twod_surface(*right_width_fit)
+    log10_velocity = np.log10(88200./tau)
+    power = LaserPowerMing_Spring2025(tau, Temp, temp_fit = None)
+    return left_width(log10_velocity, power), right_width(log10_velocity, power)
+
+
+def LaserPowerMing_Spring2025(dwell, Tpeak, temp_fit = None):
+    print("USING POWER PROFILE MING SPRING 2024")
+    if temp_fit is None:
+        temp_fit = [-0.01824834, 0.05924233, -0.01709909, 0.01145558, 2.74505353]
+
+    velo = 88200/dwell
+    log10vel = np.log10(velo)
+    get_power = inverse_temp_surface_func(*temp_fit) 
+    power = get_power(log10vel, Tpeak)
+    return power
 
 ########### Year 2023 #################
 def left_right_width_2023(tau, Temp):
+    """
+    Temperature profile for Spring 2023 CHESS run
+    The temperature is asymmetric so left and right width of the temperature
+    distribution is fitted separately.
+
+    Args:
+        dwell: float = Dwell time of the anneal
+        Tpeak: float = Peak temperature of the anneal
+    Return:
+        left width: float = left width parameter
+        right width: float = right width parameter
+    """
     left_width_fit = [ 7.93197988e+02,
                    2.34346130e+01,
                    -4.29544003e+01,
@@ -53,6 +101,15 @@ def left_right_width_2023(tau, Temp):
     return left_width(log10_velocity, power), right_width(log10_velocity, power)
 
 def LaserPowerMing_Spring2023(dwell, Tpeak, temp_fit = None):
+    """
+    Laser power for Spring 2023 CHESS run
+    Given the required dweel and Tpeak, return the power that gives that Tpeak
+    Args:
+        dwell: float = Dwell time of the anneal
+        Tpeak: float = Peak temperature of the anneal
+    Return:
+        power: float = Power that reaches that peak temperautre given the dwell time
+    """
     if temp_fit is None:
         temp_fit = [-0.06688143,
                      0.22353149,
@@ -70,6 +127,18 @@ def LaserPowerMing_Spring2023(dwell, Tpeak, temp_fit = None):
 ########### Year 2024 #################
 
 def left_right_width_2024(tau, Temp):
+    """
+    Temperature profile for Spring 2024 CHESS run
+    The temperature is asymmetric so left and right width of the temperature
+    distribution is fitted separately.
+
+    Args:
+        dwell: float = Dwell time of the anneal
+        Tpeak: float = Peak temperature of the anneal
+    Return:
+        left width: float = left width parameter
+        right width: float = right width parameter
+    """
     left_width_fit = [ 9.23610385e+02,
                        2.31591101e+02,
                       -2.33724136e+01,
@@ -94,6 +163,15 @@ def left_right_width_2024(tau, Temp):
 
 
 def LaserPowerMing_Spring2024(dwell, Tpeak, temp_fit = None):
+    """
+    Laser power for Spring 2024 CHESS run
+    Given the required dweel and Tpeak, return the power that gives that Tpeak
+    Args:
+        dwell: float = Dwell time of the anneal
+        Tpeak: float = Peak temperature of the anneal
+    Return:
+        power: float = Power that reaches that peak temperautre given the dwell time
+    """
     if temp_fit is None:
         temp_fit = [-1.71420431e-04,  6.37694255e-04, -8.72721878e-02,  2.21288491e-01, 3.64085959e+00]
 
@@ -108,9 +186,13 @@ def LaserPowerMing_Spring2024(dwell, Tpeak, temp_fit = None):
 ########### Year 2021 #############
 def LaserPowerMing_Fall2021(tau, Temp):
     """
-    Ming's new power profile
-    tau in us, Temp in C
-    Power is in units of Amps!!!
+    Laser power for Spring 2021 CHESS run
+    Given the required dweel and Tpeak, return the power that gives that Tpeak
+    Args:
+        dwell: float = Dwell time of the anneal
+        Tpeak: float = Peak temperature of the anneal
+    Return:
+        power: float = Power that reaches that peak temperautre given the dwell time
     """
     tpeak = Temp
     dwell = np.log10(tau)

@@ -1,19 +1,15 @@
-import operator
-from copy import deepcopy
-
 import requests
 import numpy as np
-from scipy.interpolate import CubicSpline
-
-from pyPhaseLabel import PhaseModel, CrystalPhase, EQ, BackgroundModel, FixedPseudoVoigt
-from pyPhaseLabel import create_phases, evaluate_obj, optimize_phase, Lorentz, PseudoVoigt
-from julia.Main import Wildcard, Lazytree, search_b, get_probabilities, optimize_b
-from julia.BackgroundSubtraction import mcbl
-from julia import CrystalShift as CS
-
-from util import minmax_norm
 
 class labeler():
+    """
+    Class that handles communication with the phase labeling backend.
+    Stores all required information for CrystalShift to do label.
+
+    parameters:
+        address: str = IP address as string
+        port: str = Port number as string
+    """
 
     def __init__(self, address="127.0.0.1", port="8080"):
         self.std_noise = .05
@@ -36,6 +32,7 @@ class labeler():
         self.has_labeled = False
 
     def construct_setting_dict(self):
+        """ Construct dictionary containing setting information to be sent to backend """
         _dict = {}
         _dict['std_noise'] = self.std_noise
         _dict['mean_θ'] = self.mean_θ
@@ -60,6 +57,12 @@ class labeler():
 
 
     def read_csv(self, csv):
+        """ 
+        Read csv input file for phase and its diffraction pattern information
+        
+        paramter:
+            csv: str = CSV file path
+        """
         self.csv_file = csv
         _dict = {"csv_file": csv}
         # TODO: Write a specific module to interact with the Julia server
@@ -68,7 +71,17 @@ class labeler():
         response = requests.get(f"{self.server_ip}/phase_names")
         self.phase_names = response.json()#[phase.name for phase in self.phases]
 
-    def fit(self, q, d, selected_phase_names = None):
+    def label(self, q, d, selected_phase_names = None):
+        """
+        label phases with CrystalShift based on current backend setting and
+        store in self.results
+
+        parameters:
+            q: np.array = 1d q vector of the diffraction pattern
+            d: np.array = 1d diffraction data
+            selected_phase_names: List[str] = selected subset phase names to be
+                                              included in the search
+        """
         _dict = self.construct_setting_dict()
         self.q = q
         self.data = d 
@@ -95,6 +108,15 @@ class labeler():
         self.label_ind = 0
 
     def fit_phases(self, q, d, phase_names):
+        """
+        fit phases with CrystalShift based on current backend setting.
+        Store results in self.results
+
+        parameters:
+            q: np.array = 1D q vector of the diffraction pattern
+            d: np.array = 1D diffraction data
+            phase_names: List[str] = list of selected phase names 
+        """
         _dict = self.construct_setting_dict()
         self.q = q
         self.data = d 
@@ -131,22 +153,6 @@ class labeler():
 
         self.print_fitted_result(results, uncer)
 
-        # print("############## Output ################")
-        # print("")
-        # print("Refinement result:")
-        # for i, cp in enumerate(result.CPs): 
-        #     if self.optimize_mode == "With Uncertainty": 
-        #         self.print_refined_result_w_uncer(cp, uncer[i*8:(i+1)*8])
-        #     else:
-        #         self.print_refined_result(cp)
-
-        # print("")
-        # print("Fractions:")
-        # for i, xi in enumerate(fractions):
-        #     print(f"    {result.CPs[i].name}: {xi}")
-        # print("")
-        # print("#####################################")
-
         self.results = [results]
         self.has_labeled = True
         self.label_ind = 0
@@ -155,26 +161,40 @@ class labeler():
         return results, uncer 
 
     def get_peaks_at(self, idx: int):
+        """
+        Get peaks information for the i^th phase in the phase list 
+        parameter:
+            idx: int = requested phase index in the phase list
+        """
         return requests.get(f"{self.server_ip}/peak_info/{idx}").json()
         
 
-    @property
-    def residual(self):
-        spectrum = evaluate_obj(self.results[self.label_ind], self.q)
-        d = self.data - spectrum
-        d -= self.bg
-        return d
+    # @property
+    # def residual(self):
+    #     spectrum = evaluate_obj(self.results[self.label_ind], self.q)
+    #     d = self.data - spectrum
+    #     d -= self.bg
+    #     return d
 
     @property
     def fit_result(self):
+        """ evaluate current fit result to simulate diffraction pattern """
         return self.evaluate_fitted(self.label_ind, self.q)
 
     @property
     def server_ip(self):
         return f"http://{self.address}:{self.port}"
 
-
     def next_label_result(self):
+        """
+        Move index to next (less probable) label result and return its info
+        return:
+            label_ind: int = index of current entry in the labeled result list
+            probs: float = estimated probability of this label result
+            fit_result: np.array = 
+            fraction: np.array = mole fraction of each phase in this result
+            bg: np.array = estimated background
+        """
         self.label_ind += 1
         if self.label_ind == len(self.results):
             self.label_ind = 0
@@ -185,6 +205,16 @@ class labeler():
                 self.bg)
 
     def previous_label_result(self):
+        """
+        Move index to previous (less probable) label result and return its info
+        return:
+            label_ind: int = index of current entry in the labeled result list
+            probs: float = estimated probability of this label result
+            fit_result: np.array = 
+            fraction: np.array = mole fraction of each phase in this result
+            bg: np.array = estimated background
+        """
+        # Can be combine with next_label_result but I think this is more readable?
         self.label_ind -= 1
         if self.label_ind < 0:
             self.label_ind = len(self.results) - 1
@@ -211,7 +241,20 @@ class labeler():
     def set_hyperparams(self, std_noise, mean, std, max_phase,
                         expand_k, background_length, max_iter,
                         optimize_mode, background_option):
+        """
+        Set the hyperparameters for the model.
 
+        parameters:
+            std_noise: float
+            mean: List[float]
+            std: List[float]
+            max_phase: int
+            expand_k: int
+            background_length: float
+            max_iter: int
+            optimize_mode: str
+            background_option: str
+        """
         self.std_noise = std_noise
         self.mean_θ = mean
         self.std_θ = std
@@ -223,8 +266,12 @@ class labeler():
         self.background_option = background_option
 
 
-
     def get_dict_for_storing(self):
+        """
+        Get dictionary with information for storing
+        return:
+            datadict: Dict[str, any] = dictionary with phase infromations
+        """
         datadict = {}
         datadict['q'] = self.q.tolist()
         datadict['XRD'] = self.data.tolist()
@@ -254,50 +301,48 @@ class labeler():
         datadict['phase'] = phase_dict
         return datadict
 
-    def get_dict_from_cl(self, cl):
-        c_dict = {}
-        c_dict["a"] = cl.a
-        c_dict["b"] = cl.b
-        c_dict["c"] = cl.c
-        c_dict["α"] = cl.α * 180 / np.pi
-        c_dict["β"] = cl.β * 180 / np.pi
-        c_dict["γ"] = cl.γ * 180 / np.pi
-        return c_dict
+    # def get_dict_from_cl(self, cl):
+    #     c_dict = {}
+    #     c_dict["a"] = cl.a
+    #     c_dict["b"] = cl.b
+    #     c_dict["c"] = cl.c
+    #     c_dict["α"] = cl.α * 180 / np.pi
+    #     c_dict["β"] = cl.β * 180 / np.pi
+    #     c_dict["γ"] = cl.γ * 180 / np.pi
+    #     return c_dict
 
-    def get_optimize_enum(self, optimize_mode_str):
-        if optimize_mode_str == "Simple":
-            return CS.Simple
-        if optimize_mode_str == "EM":
-            return CS.EM
-        if optimize_mode_str == "With Uncertainty":
-            return CS.WithUncer
+    # def print_refined_result(self, CP):
+    #     a_strain, b_strain, c_strain, α_strain, β_strain, γ_strain = CS.get_strain(CP)
+    #     print(f"Phase name: {CP.name}, ID: {CP.id}")
+    #     print(f"Optimization parameters:")
+    #     print(f"Activation: {CP.act}, Peak width: {CP.σ}")
+    #     print(f"Normalization: {CP.norm_constant}")
+    #     print(f"Lattice information:")
+    #     print(f"a: {CP.cl.a:.6f}, b: {CP.cl.b:.6f}, c: {CP.cl.c:.6f}")
+    #     print(f"α: {CP.cl.α/np.pi*180:.2f}, β: {CP.cl.β/np.pi*180:2f}, γ: {CP.cl.γ/np.pi*180:.2f}")
+    #     print(f"Strain: a:{a_strain:.4f}, b:{b_strain:.4f}, c:{c_strain:.4f}, α:{α_strain:.4f}, β:{β_strain:.4f}, γ:{γ_strain:.4f}")
+    #     print("")
 
-    def print_refined_result(self, CP):
-        a_strain, b_strain, c_strain, α_strain, β_strain, γ_strain = CS.get_strain(CP)
-        print(f"Phase name: {CP.name}, ID: {CP.id}")
-        print(f"Optimization parameters:")
-        print(f"Activation: {CP.act}, Peak width: {CP.σ}")
-        print(f"Normalization: {CP.norm_constant}")
-        print(f"Lattice information:")
-        print(f"a: {CP.cl.a:.6f}, b: {CP.cl.b:.6f}, c: {CP.cl.c:.6f}")
-        print(f"α: {CP.cl.α/np.pi*180:.2f}, β: {CP.cl.β/np.pi*180:2f}, γ: {CP.cl.γ/np.pi*180:.2f}")
-        print(f"Strain: a:{a_strain:.4f}, b:{b_strain:.4f}, c:{c_strain:.4f}, α:{α_strain:.4f}, β:{β_strain:.4f}, γ:{γ_strain:.4f}")
-        print("")
-
-
-    def print_refined_result_w_uncer(self, CP, uncer):
-        a_strain, b_strain, c_strain, α_strain, β_strain, γ_strain = CS.get_strain(CP)
-        print(f"Phase name: {CP.name}, ID: {CP.id}")
-        print(f"Optimization parameters:")
-        print(f"Activation: {CP.act:.4f}±{uncer[6]:.4f}, Peak width: {CP.σ:.4f}±{uncer[7]:.4f}")
-        print(f"Normalization: {CP.norm_constant}")
-        print(f"Lattice information:")
-        print(f"a: {CP.cl.a:.6f}±{uncer[0]:.6f}, b: {CP.cl.b:.6f}±{uncer[1]:.6f}, c: {CP.cl.c:.6f}±{uncer[2]:.6f}")
-        print(f"α: {CP.cl.α/np.pi*180:.2f}±{uncer[3]/np.pi*180:.2f}, β: {CP.cl.β/np.pi*180:.2f}±{uncer[4]/np.pi*180:.2f}, γ: {CP.cl.γ/np.pi*180:.2f}±{uncer[5]/np.pi*180:.2f}")
-        print(f"Strain: a:{a_strain:.4f}, b:{b_strain:.4f}, c:{c_strain:.4f}, α:{α_strain:.4f}, β:{β_strain:.4f}, γ:{γ_strain:.4f}")
-        print("")
+    # def print_refined_result_w_uncer(self, CP, uncer):
+    #     a_strain, b_strain, c_strain, α_strain, β_strain, γ_strain = CS.get_strain(CP)
+    #     print(f"Phase name: {CP.name}, ID: {CP.id}")
+    #     print(f"Optimization parameters:")
+    #     print(f"Activation: {CP.act:.4f}±{uncer[6]:.4f}, Peak width: {CP.σ:.4f}±{uncer[7]:.4f}")
+    #     print(f"Normalization: {CP.norm_constant}")
+    #     print(f"Lattice information:")
+    #     print(f"a: {CP.cl.a:.6f}±{uncer[0]:.6f}, b: {CP.cl.b:.6f}±{uncer[1]:.6f}, c: {CP.cl.c:.6f}±{uncer[2]:.6f}")
+    #     print(f"α: {CP.cl.α/np.pi*180:.2f}±{uncer[3]/np.pi*180:.2f}, β: {CP.cl.β/np.pi*180:.2f}±{uncer[4]/np.pi*180:.2f}, γ: {CP.cl.γ/np.pi*180:.2f}±{uncer[5]/np.pi*180:.2f}")
+    #     print(f"Strain: a:{a_strain:.4f}, b:{b_strain:.4f}, c:{c_strain:.4f}, α:{α_strain:.4f}, β:{β_strain:.4f}, γ:{γ_strain:.4f}")
+    #     print("")
 
     def get_fraction(self, CPs):
+        """ 
+        Get mole fraction of phase in CPs (list of phases).
+        The result takes into account of the structure factor and is normalized
+        to have sum of 1.
+        parameters:
+            CPs: List[Dict[]] = list of dictionary that includes phase information
+        """
         fraction = []
         for CP in CPs:
             fraction.append(self.get_moles(CP))
@@ -306,6 +351,11 @@ class labeler():
         return fraction
 
     def get_strain(self, CP):
+        """
+        Calculate strain for CP (phase)
+        paramter:
+            CP: Dict[] = phase informations
+        """
         a = (CP["cl"]["a"] - CP["origin_cl"]["a"]) / CP["origin_cl"]["a"]
         b = (CP["cl"]["b"] - CP["origin_cl"]["b"]) / CP["origin_cl"]["b"]
         c = (CP["cl"]["c"] - CP["origin_cl"]["c"]) / CP["origin_cl"]["c"]
@@ -315,22 +365,36 @@ class labeler():
         return a, b, c, α, β, γ
 
     def get_moles(self, CP):
+        """
+        Calculate moels for CP (phase)
+        paramter:
+            CP: Dict[] = phase informations
+        """
         return CP["act"] * self.get_n(CP["profile"]["α"], CP["σ"]) / CP["norm_constant"]
 
     def get_n(self, α, σ) :
+        """ 
+        Get normalization constant
+        paramters:
+            α: float = PseudoVoigt parameter
+            σ: float = Width parameter of the PseudoVoigt profile
+        """
         return α*np.pi*σ + (1 - α)*σ*np.sqrt(2*np.pi)
 
 
     ######### API call helpers #######
     def evaluate(self, idx, q):
+        """ Simulate XRD pattern of idx^th phase """
         _dict = {'q': q.tolist()}
         return np.array(requests.get(f"{self.server_ip}/evaluate/{idx}", json=_dict).json())
 
     def evaluate_fitted(self, idx, q):
+        """ Simulate XRD pattern of idx^th label result """
         _dict = {'q': q.tolist()}
         return requests.get(f"{self.server_ip}/evaluate_fitted/{idx}", json=_dict).json()
 
     def evaluate_fitted_background(self, idx, q):
+        """ Get the background pattern of idx^th label result """
         _dict = {'q': q.tolist()}
         return np.array(requests.get(f"{self.server_ip}/evaluate_fitted_background/{idx}", json=_dict).json())
 

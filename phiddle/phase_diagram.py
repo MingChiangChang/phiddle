@@ -16,25 +16,62 @@ from util import COLORS
 # TODO: Combine phase diagram list signal to just one, much easier to sync
 
 class PhaseDiagramView(FigureCanvasQTAgg):
+    """
+    Phase Digram View that can switch between 2d and 3d phase diagrams
 
-    def __init__(self, parent=None, xlim=(250, 10000), ylim=(400, 1400)):
+    Attributes:
+        xlim: 2Tuple
+            x limits of the phase digram
+        ylim: 2Tuple
+            y limits of the phase digram
+        dim: int
+            dimension of the phase diagram. Only 2 or 3 is valid
+        phase_dict: dict
+            Dictionary for phase diagram info. Comes from the data model
+        phase_list: list
+            Store phases that should be plotted in colors
+    """
+
+    def __init__(self, xlim=(250., 10000.), ylim=(400., 1400.)):
+        """ 
+        Initialize parameters.
+
+
+        Args:
+            xlim: Tuple[float, float]
+                x limits of the plot
+
+            ylim: Tuple[float, float]
+                x limits of the plot
+        """
 
         self.fig = Figure(tight_layout=True)
         super(PhaseDiagramView, self).__init__(self.fig)
-        self.setParent = parent
 
         self.phase_diagram = self.fig.add_subplot() # Default empty plot
-
-
         self.xlim = xlim
         self.ylim = ylim
-
         self.dim = 2
         self.phase_dict = {} # Purposely use stateful widget to separate the weight from main view manager
         self.phase_list = []
         # self.draw()
 
-    def plot(self, phase_dict, axes = ["Dwell", "Tpeak"],  phase_list=None, plot_convex_hull=False):
+    def plot(self, phase_dict, axes = ["Dwell", "Tpeak"],
+             phase_list=None, plot_convex_hull=False):
+        """
+        Plot the phase diagram based on the dictionary provided
+
+        Args:
+            phase_dict: dict
+                Dictionary for phase diagram info. Comes from the data model
+            axes: List[string]
+                Listing the axes to be plotted
+            phase_list: List[string]
+                Listing the phases that should be plotted in colors.
+                Other phases will be plotted in light gray
+            plot_convex_hull: bool
+                Flag of whether to plot convex hulls for phases listed in phase_list
+        """
 
         self.phase_dict = phase_dict
         self.phase_list = phase_list
@@ -45,7 +82,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
             others = [p for p in phase_name_ls if p not in phase_list]
             phase_name_ls = phase_list 
 
-        if self.dim == 2:
+        if self.dim == 2: # For 2D phase digrams
             if self.fig.axes:
                 self.fig.gca().remove()
             self.phase_diagram = self.fig.add_subplot()
@@ -59,7 +96,7 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                 self.phase_diagram.scatter(x, y, label=phase,
                                            color=COLORS[((idx+1) % len(COLORS)-1)],
                                            alpha=0.5)
-                if plot_convex_hull:
+                if plot_convex_hull: # Plot 2D convex hull of the phase region
                     try:
                         hull = ConvexHull(np.vstack((x, y)).T)
 
@@ -74,16 +111,14 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                     except QhullError:
                         print("Linear points for {phase}. Unable to create convex hullregion.")
 
-                    # self.phase_diagram.fill(x[hull.vertices[0],0], points[hull.vertices[0],1], 'ro')
             if phase_list is not None:
                 for idx, phase in enumerate(others):
                     self.phase_diagram.scatter(phase_dict[phase][axes[0]],
                                                phase_dict[phase][axes[1]],
                                                label="Other" if idx==0 else "_other",
-                                               color="#DFDFDF", #'k', #COLORS[((idx+1) % len(COLORS)-1)],
+                                               color="#DFDFDF", 
                                                alpha=1., 
                                                s=4.)
-
 
             self.phase_diagram.set_xlim(xlim)
             self.phase_diagram.set_xlabel(xlabel)
@@ -91,10 +126,9 @@ class PhaseDiagramView(FigureCanvasQTAgg):
             self.phase_diagram.set_ylim(ylim)
             self.phase_diagram.set_ylabel(ylabel)
             self.phase_diagram.set_yscale(yscale)
-
             self.phase_diagram.legend(bbox_to_anchor=(1., 1.))
 
-        elif self.dim == 3:
+        elif self.dim == 3: # For 3D phase diagrams
             if self.fig.axes:
                 self.fig.gca().remove()
                 cids = sorted(list(self.callbacks._pickled_cids))
@@ -133,9 +167,9 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                                                zs = transform[2](phase_dict[phase][axes[2]]),
                                                label="Other" if idx==0 else "_other",
                                                s=10,
-                                               color="#DFDFDF",#'k', #COLORS[((idx+1) % len(COLORS)-1)],
+                                               color="#DFDFDF",
                                                alpha=1.)
-
+            # Note: no convexhull plotting for 3D currently
 
             self.phase_diagram.set_xlim(xlim)
             self.phase_diagram.set_xlabel(xlabel)
@@ -148,11 +182,6 @@ class PhaseDiagramView(FigureCanvasQTAgg):
                 self.format_log_tick(self.get_log_axis(scales))
             self.phase_diagram.legend()
         self.draw()
-
-
-    # def plot_convex_hull(self, phase_dict, axes = ["Dwell", "Tpeak"] , phase_list=None):
-
-
 
     def format_log_tick(self, axis):
         axis.set_major_formatter(mticker.FuncFormatter(self.log_tick_formatter))
@@ -226,6 +255,21 @@ class PhaseDiagramView(FigureCanvasQTAgg):
 
 
 class PhaseDiagramList(QWidget):
+    """ 
+    Will be displayed next to the phase diagram
+    Contains pull down menu for selected dimensionality of the phase diagram,
+    x, y, z axis selection and check boxes to choose what phase to show
+
+    Signals:
+        checked_signal(list): send what phases are checked once the user check
+                              or uncheck a box
+        save_signal(): trigger saving of the phase diagram plot
+        axes_signal(list): send what the axes of the phase diagram should be
+                           triggered when the axes menu is changed by the user
+        dim_change_signal(int, list): 
+            triggered when dimensionality pull down menu is changed by the user.
+            Send the dimension and the axes
+    """
 
     checked_signal = pyqtSignal(list)
     save_signal = pyqtSignal()
@@ -233,6 +277,7 @@ class PhaseDiagramList(QWidget):
     dim_change_signal = pyqtSignal(int, list)
 
     def __init__(self, composition_dim=0, parent=None):
+        """ initialize widget """
 
         # Better way will be to create it just before showing it, but
         # Need to figure out how to do it in pyqt
@@ -309,6 +354,7 @@ class PhaseDiagramList(QWidget):
         self.setLayout(self.outer_layout)
 
     def select_all(self, check_state_int):
+        """ make all the checkboxes visible be checed or unchecked  """
         if check_state_int == 2:
             for w in self.widget_ls:
                 w.setCheckState(Qt.CheckState.Checked)
@@ -318,6 +364,7 @@ class PhaseDiagramList(QWidget):
         self.update_phase_diagram()
  
     def update_combo_boxes(self):
+        """ Update the pull down menu to the proper options  """
         option_ls = self.get_option_ls()
         self.update_combo_box(self.axis1_selection_box, option_ls)
         self.update_combo_box(self.axis2_selection_box, option_ls)
@@ -334,6 +381,10 @@ class PhaseDiagramList(QWidget):
 
 
     def get_option_ls(self):
+        """
+        Get the propert option list.
+        This includes: ["Dwell", "Tpeak", *cations]
+        """
         ls = ["Dwell", "Tpeak"]
         i = 0
         while i < self.composition_dim:
@@ -371,20 +422,23 @@ class PhaseDiagramList(QWidget):
 
 
     def update_phase_diagram(self):
+        """ emit what boxes are being checked  """
         self.checked_signal.emit(self.get_checked_phase_names())
 
     def get_checked_phase_names(self):
+        """ return names of phases that were checked """
         return [checkbox.text() for checkbox in self.widget_ls if checkbox.isChecked()]
 
     def dim_changed(self):
+        """ Trigger things when the dimension is being changed  """
         if self.dim_selection_box.currentIndex() == 0:
-            self.axis3_label.hide()
+            self.axis3_label.hide() # Hide the pull down menu for the 3rd axis
             self.axis3_selection_box.hide()
             dim = 2
             axes = [box.currentText() for box in [self.axis1_selection_box,
                                                  self.axis2_selection_box]]
         elif self.dim_selection_box.currentIndex() == 1:
-            self.axis3_label.show()
+            self.axis3_label.show() # show the pull down menu for the 3rd axis
             self.axis3_selection_box.show()
             self.axis3_selection_box.setCurrentIndex(2)
             dim = 3
@@ -400,11 +454,12 @@ class PhaseDiagramList(QWidget):
         return self.plot_selection_box.currentText() == "Convex Hull"
 
     def axes_changed(self):
+        """ collect the current axes options and emit """
         axes = self.get_current_axes()
         self.axes_signal.emit(axes)
 
-
     def get_current_axes(self):
+        """ collect the current axes options """
         axes = [box.currentText() for box in [self.axis1_selection_box,
                                              self.axis2_selection_box]]
         if self.dim_selection_box.currentIndex() == 1:
