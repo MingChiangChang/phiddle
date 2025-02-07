@@ -10,12 +10,30 @@ from PyQt6.QtWidgets import (
 #          phases for convenience (QListWidget is a little bit difficult to use)
 
 class CIFView(QWidget):
+    """
+    A display widget for showing a list of CIF files with checkboxes, allowing users to add
+    or remove selected CIF files in the stripeview.
+
+    signals:
+        checked: pyqtSignal(list) = Emitted when a checkbox state changes, passing a list of boolean values.
+        add: pyqtSignal(list) = Emitted when "Add to phase diagram" is clicked, passing a list of selected CIF names.
+        remove: pyqtSignal() = Emitted when "Remove from phase diagram" is clicked.
+    """
 
     checked = pyqtSignal(list)
     add = pyqtSignal(list)
     remove = pyqtSignal()
 
     def __init__(self, cif_list, parent=None):
+        """
+        Initialize the CIFView widget with the provided list of CIF files.
+
+        parameters:
+            cif_list: list
+                A list of CIF file names to be displayed as checkboxes.
+            parent: QWidget, optional
+                The parent widget for this CIFView. Defaults to None.
+        """
 
         super(CIFView, self).__init__(parent)
 
@@ -49,7 +67,13 @@ class CIFView(QWidget):
         self.setLayout(self.layout)
 
     def update_cif_list(self, cif_list):
-        """ Reuse checkboxes  """
+        """
+        Update the CIF list by adding or removing checkboxes for the CIF files.
+
+        parameters:
+            cif_list: list
+                A list of CIF file names to update the checkboxes for.
+        """
         self.layout.removeWidget(self.add_button)
         self.layout.removeWidget(self.remove_button)
         self.layout.removeWidget(self.amorphous_checkbox)
@@ -81,31 +105,74 @@ class CIFView(QWidget):
         self.clear()
 
     def update_stick_pattern(self):
+        """
+        Emit a signal with the current checkbox states, indicating which CIFs are selected.
+
+        This signal is emitted every time a checkbox is toggled, providing the current
+        state of all checkboxes (excluding the last two).
+        """
         self.checked.emit([checkbox.isChecked()
                           for checkbox in self.widget_ls[:-2]])
 
     def add_to_phase_diagram(self):
+        """
+        Emit a signal to add selected CIF files to the phase diagram.
+
+        The signal is emitted when the "Add to phase diagram" button is clicked, passing
+        a list of selected CIF file names to the connected slots.
+        """
         self.add.emit([checkbox.text() for checkbox in self.widget_ls if checkbox.isChecked()])
 
 
     def remove_from_phase_diagram(self):
+        """
+        Emit a signal to remove CIF files from the phase diagram.
+
+        The signal is emitted when the "Remove from phase diagram" button is clicked.
+        """
         self.remove.emit()
 
     def clear(self):
+        """
+        Uncheck all checkboxes.
+
+        This function clears the selection by unchecking all the checkboxes in the list.
+        """
         for checkbox in self.widget_ls:
             checkbox.setChecked(False)
 
     def check_boxes(self, ind_ls):
+        """
+        Check the checkboxes at the specified indices.
+
+        parameters:
+            ind_ls: list
+                A list of indices corresponding to the checkboxes that should be checked.
+        """
         for ind in ind_ls:
             self.widget_ls[ind].setChecked(True)
         self.update_stick_pattern()
 
     def get_checked_phase_names(self):
+        """
+        Get the names of the selected phases.
+
+        return:
+            list: A list of phase names corresponding to the selected checkboxes,
+                  excluding the "Amorphous" and "Melt" options.
+        """
         return [checkbox.text() for checkbox in self.widget_ls
                 if checkbox.isChecked()
                 if checkbox.text() != "Amorphous" and checkbox.text() != "Melt"]
 
     def set_checked_phase_names(self, phase_names):
+        """
+        Set the checkboxes based on the provided phase names.
+
+        parameters:
+            phase_names: list
+                A list of phase names to check. Checkboxes corresponding to these phase names will be checked.
+        """
         for checkbox in self.widget_ls:
             if checkbox.text() in phase_names:
                 checkbox.setChecked(True)

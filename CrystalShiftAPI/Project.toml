@@ -1,0 +1,13 @@
+name = "CrystalShiftAPI"
+uuid = "0a736b51-4d7e-4db9-8a01-f7fa328dcd6c"
+authors = ["Ming-Chiang Chang <mc2663@cornell.edu>"]
+version = "0.1.0"
+
+[deps]
+BackgroundSubtraction = "9977cdcb-3521-4027-9f3f-3caff6505f42"
+CovarianceFunctions = "b3329135-7958-41d4-bb02-e084c5a526bf"
+CrystalShift = "fb120844-f04e-4a6b-a6eb-278194263097"
+CrystalTree = "9c8cff83-2ad6-4961-8214-2a9086396538"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Oxygen = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"

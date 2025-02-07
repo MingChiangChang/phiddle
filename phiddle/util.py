@@ -3,13 +3,16 @@ from types import SimpleNamespace
 
 import numpy as np
 
+# Helper functions
+# Should moslty be self explanable
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 __date__ = "07/20/2024"
 COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
           '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#dd8dff', '#48971b']
 
 
+# 1d distribution functions
 def oned_gaussian(x, height, x_0, width_x):
     return height * np.exp( -((x-x_0)/width_x)**2 /2) 
 
@@ -25,6 +28,7 @@ def lorentz(x, height, x_0, width_x):
 def two_lorentz(height, x_0, sigma_1, sigma_2):
     return lambda x: ( lorentz(x, height, x_0, sigma_1)*(x<=x_0).astype(int)
                      + lorentz(x, height, x_0, sigma_2)*(x>x_0).astype(int) )
+# End of 1d distribution functions
 
 
 def get_continue_patches(indices):

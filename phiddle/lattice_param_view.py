@@ -1,8 +1,8 @@
 import numpy as np
-from PyQt6 import QtCore, QtGui, QtWidgets
+# from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QWidget, QPushButton, QTabWidget, QFormLayout,
+    QVBoxLayout, QWidget, QPushButton, 
     QCheckBox, QFileDialog, QComboBox, QHBoxLayout, QLabel
 )
 from matplotlib.backends.backend_qtagg import (
