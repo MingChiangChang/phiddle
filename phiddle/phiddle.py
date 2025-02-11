@@ -848,7 +848,10 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    sys.stdin.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding='utf-8')
     sys.excepthook = error_handler # This should be able to catch all exceptions
+
     app = QtWidgets.QApplication(sys.argv)
 
     w = 1920

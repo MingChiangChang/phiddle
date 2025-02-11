@@ -14,7 +14,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from util import (minmax_norm, minmax_denorm, COLORS, find_first_larger,
                   get_continue_patches, find_first_smaller)
-from pyPhaseLabel import evaluate_obj
+# from pyPhaseLabel import evaluate_obj
 from setting import PlotSettings, HeatmapPlotSettings, set_plot
 
 
