@@ -86,18 +86,25 @@ def write_peaks_info(f, lattice, q_range, wvlen):
 
     qs = []
     Is = []
+    hs = []
+    ks = []
+    ls = []
     for i, peak in enumerate(xrd):
         q = xrd[peak]['qpos']*10
-        I = xrd[peak]['r']
-        print(i, q, I, flush=True)
-        qs.append(q)
-        Is.append(I)
+        if q_range[0] < q < q_range[1]:
+            I = xrd[peak]['r']
+            hs.append(peak[0])
+            ks.append(peak[1])
+            ls.append(peak[2])
+            print(i, q, I, flush=True)
+            qs.append(q)
+            Is.append(I)
     Is = np.array(Is)
     Is /= np.max(Is)
 
     for i, _ in enumerate(Is):
         if q_range[0] < qs[i] < q_range[1] and Is[i]>0.001:
-            f.write(f'\n{peak[0]},{peak[1]},{peak[2]},{q},{Is[i]}')
+            f.write(f'\n{hs[i]},{ks[i]},{ls[i]},{qs[i]},{Is[i]}')
     f.write('#\n')
 
 def q_to_two_theta(wvlen, *args):
