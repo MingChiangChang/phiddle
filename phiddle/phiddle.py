@@ -4,6 +4,7 @@ import traceback
 import json
 import logging
 import argparse
+import time
 
 import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
@@ -53,6 +54,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.stripeview = stripeview()
         self.globalview = globalview()
         self.load_fn = ""
+        self._h5_path = None
         self.h5_path = h5_path
         self.csv_path = csv_path
         self.model = datamodel()
@@ -68,10 +70,12 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
         # spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         if h5_path:
+            self.h5_path = h5_path
             self.model.read_h5(h5_path)
             self.ind = 0
             self._update(self.ind)
         if csv_path:
+            time.sleep(3)
             self.labeler.read_csv(csv_path)
             self.cifview.update_cif_list(self.labeler.phase_names)
 
@@ -335,10 +339,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         self.load_fn = load_fn
         with open(self.load_fn, 'r') as f:
             meta_data = json.load(f)
-
-
-        print(os.path.isfile(meta_data["h5_path"]))
-        print(os.path.isfile(meta_data["csv_path"]))
 
         if (os.path.isfile(meta_data["h5_path"])
                 and os.path.isfile(meta_data["csv_path"])):
@@ -711,6 +711,19 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                 )
             self.labeler.print_current_CPs()
 
+
+    @property
+    def h5_path(self):
+        return self._h5_path
+
+
+    @h5_path.setter
+    def h5_path(self, val):
+        self._h5_path = val
+        if val is not None:
+            self.setWindowTitle(f"Phiddle v{__version__} {__date__} {os.path.basename(val)}") 
+
+
     @property
     def ind(self):
         return self._ind
@@ -859,10 +872,12 @@ if __name__ == "__main__":
 
     args = parse_args()
     window = TopLevelWindow(args.h5, args.csv)
-    if args.json:
-        window.load(args.json)
     
     window.resize(w, h)
     window.show()
+
+    if args.json:
+        time.sleep(3)
+        window.load(args.json)
 
     sys.exit(app.exec())
