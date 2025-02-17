@@ -27,8 +27,8 @@ class labeler():
         self.max_iter = 512
         self.csv_file = ""
 
-        self.results = []
-        self.bg = []
+        self.results = [] # Will be stroing PhaseModels
+        self.bg = np.array([])
         self.has_labeled = False
 
     def construct_setting_dict(self):
@@ -101,7 +101,8 @@ class labeler():
             _dict["names"] = selected_phase_names
             response = requests.post(f"{self.server_ip}/label_with_phase",
                                      json=_dict)
-        results, self.probs, self.bg = response.json()
+        results, self.probs, bg = response.json()
+        self.bg = np.array(bg)
         self.print_fitted_result(results[0]["phase_model"])
         self.results = [result["phase_model"] for result in results]
         self.has_labeled = True
@@ -126,7 +127,8 @@ class labeler():
         
         response = requests.post(f"{self.server_ip}/fit_with_phase",
                                  json=_dict)
-        results, self.probs, self.bg = response.json()
+        results, self.probs, bg = response.json()
+        self.bg = np.array(bg)
 
         if self.optimize_mode == "With Uncertainty":
             print("Uncertainty not supported in server mode yet")
@@ -277,63 +279,26 @@ class labeler():
         datadict['XRD'] = self.data.tolist()
 
         res = self.results[self.label_ind]
-        if res.background is not None:
-            datadict['background'] = (
-                evaluate_obj(
-                    res.background,
-                    self.q) +
-                self.bg).tolist()
+        fit_result = self.fit_result
+        if res["background"] is not None:
+            datadict["background"] = (
+                self.evaluate_fitted_background(self.label_ind, self.q)
+                + self.bg).tolist()
         else:
-            datadict['background'] = self.bg.tolist()
+            datadict["background"] = self.bg.tolist()
 
-        fractions = get_fraction(res.CPs)
+        fractions = self.get_fraction(res["CPs"])
         phase_dict = {}
-        for idx, phase in enumerate(res.CPs):
-            phase_dict[phase.name] = {}
-            phase_dict[phase.name]["lattice"] = self.get_dict_from_cl(phase.cl)
-            phase_dict[phase.name]["ref_lattice"] = self.get_dict_from_cl(
-                phase.origin_cl)
-            phase_dict[phase.name]["pattern"] = evaluate_obj(
-                phase, self.q).tolist()
-            phase_dict[phase.name]["fraction"] = fractions[idx]
-            phase_dict[phase.name]["act"] = phase.act
-            phase_dict[phase.name]["width"] = phase.σ
+        for idx, phase in enumerate(res["CPs"]):
+            phase_dict[phase["name"]] = {}
+            phase_dict[phase["name"]]["lattice"] = res["CPs"][idx]["cl"]
+            phase_dict[phase["name"]]["ref_lattice"] = res["CPs"][idx]["origin_cl"]
+            phase_dict[phase["name"]]["pattern"] = fit_result[phase["name"]] 
+            phase_dict[phase["name"]]["fraction"] = fractions[idx]
+            phase_dict[phase["name"]]["act"] = phase["act"]
+            phase_dict[phase["name"]]["width"] = phase["σ"]
         datadict['phase'] = phase_dict
         return datadict
-
-    # def get_dict_from_cl(self, cl):
-    #     c_dict = {}
-    #     c_dict["a"] = cl.a
-    #     c_dict["b"] = cl.b
-    #     c_dict["c"] = cl.c
-    #     c_dict["α"] = cl.α * 180 / np.pi
-    #     c_dict["β"] = cl.β * 180 / np.pi
-    #     c_dict["γ"] = cl.γ * 180 / np.pi
-    #     return c_dict
-
-    # def print_refined_result(self, CP):
-    #     a_strain, b_strain, c_strain, α_strain, β_strain, γ_strain = CS.get_strain(CP)
-    #     print(f"Phase name: {CP.name}, ID: {CP.id}")
-    #     print(f"Optimization parameters:")
-    #     print(f"Activation: {CP.act}, Peak width: {CP.σ}")
-    #     print(f"Normalization: {CP.norm_constant}")
-    #     print(f"Lattice information:")
-    #     print(f"a: {CP.cl.a:.6f}, b: {CP.cl.b:.6f}, c: {CP.cl.c:.6f}")
-    #     print(f"α: {CP.cl.α/np.pi*180:.2f}, β: {CP.cl.β/np.pi*180:2f}, γ: {CP.cl.γ/np.pi*180:.2f}")
-    #     print(f"Strain: a:{a_strain:.4f}, b:{b_strain:.4f}, c:{c_strain:.4f}, α:{α_strain:.4f}, β:{β_strain:.4f}, γ:{γ_strain:.4f}")
-    #     print("")
-
-    # def print_refined_result_w_uncer(self, CP, uncer):
-    #     a_strain, b_strain, c_strain, α_strain, β_strain, γ_strain = CS.get_strain(CP)
-    #     print(f"Phase name: {CP.name}, ID: {CP.id}")
-    #     print(f"Optimization parameters:")
-    #     print(f"Activation: {CP.act:.4f}±{uncer[6]:.4f}, Peak width: {CP.σ:.4f}±{uncer[7]:.4f}")
-    #     print(f"Normalization: {CP.norm_constant}")
-    #     print(f"Lattice information:")
-    #     print(f"a: {CP.cl.a:.6f}±{uncer[0]:.6f}, b: {CP.cl.b:.6f}±{uncer[1]:.6f}, c: {CP.cl.c:.6f}±{uncer[2]:.6f}")
-    #     print(f"α: {CP.cl.α/np.pi*180:.2f}±{uncer[3]/np.pi*180:.2f}, β: {CP.cl.β/np.pi*180:.2f}±{uncer[4]/np.pi*180:.2f}, γ: {CP.cl.γ/np.pi*180:.2f}±{uncer[5]/np.pi*180:.2f}")
-    #     print(f"Strain: a:{a_strain:.4f}, b:{b_strain:.4f}, c:{c_strain:.4f}, α:{α_strain:.4f}, β:{β_strain:.4f}, γ:{γ_strain:.4f}")
-    #     print("")
 
     def get_fraction(self, CPs):
         """ 
