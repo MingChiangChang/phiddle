@@ -15,7 +15,7 @@ def get_center_asym(data, left_fwhm = 1., right_fwhm = None, p=1/4):
         right_fwhm: float or None = fwhm of the left side
         p: float = excluded region in portion of data.shape[1]
     """
-    if left_fwhm < right_fwhm:
+    if (right_fwhm is not None) and (left_fwhm < right_fwhm):
         im1 = np.flip(np.array(data), axis=1)
         left_fwhm, right_fwhm = right_fwhm, left_fwhm
         flip = True
