@@ -78,6 +78,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             time.sleep(3)
             self.labeler.read_csv(csv_path)
             self.cifview.update_cif_list(self.labeler.phase_names)
+            self.popup.default_phase_options = ["", *self.labeler.get_phase_names()]
 
         self.phase_diagram_view = PhaseDiagramView()
         self.phase_diagram_list = PhaseDiagramList()
@@ -273,8 +274,11 @@ class TopLevelWindow(QtWidgets.QMainWindow):
                                  None, "Open csv", "", "CSV Files (*.csv)"
                                  )
         if self.csv_path.endswith("csv"):
+            # FIXME: Repeating actions when update csv, probably should seperate into a function
+            # But not sure how to sync things, maybe play with signals
             self.labeler.read_csv(self.csv_path)
             self.cifview.update_cif_list(self.labeler.phase_names)
+            self.popup.default_phase_options = ["", *self.labeler.get_phase_names()]
                 # [phase.name for phase in self.labeler.phases])
 
     def browse_cif_button_clicked(self):
@@ -294,6 +298,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             cif_to_input(self.cif_paths, self.csv_path, (10, 60)) # TODO: add range to settings
             self.labeler.read_csv(self.csv_path)
             self.cifview.update_cif_list(self.labeler.phase_names)
+            self.popup.default_phase_options = ["", *self.labeler.get_phase_names()]
             #    [phase.name for phase in self.labeler.phases])
 
     def save_progress_clicked(self):
@@ -358,9 +363,10 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.lattice_param_list.update_axis_combo_boxes()
 
             self.h5_path = meta_data["h5_path"]
-            self.labeler.read_csv(meta_data["csv_path"])
             self.csv_path = meta_data["csv_path"]
+            self.labeler.read_csv(meta_data["csv_path"])
             self.cifview.update_cif_list(self.labeler.phase_names)
+            self.popup.default_phase_options = ["", *self.labeler.get_phase_names()]
             self.model.update_phases(meta_data["phases"])
 
             if "full_phase_diagram" in meta_data:
@@ -672,12 +678,14 @@ class TopLevelWindow(QtWidgets.QMainWindow):
 
     def update_params(self, std_noise, mean, std, max_phase,
                       expand_degree, background_length, max_iter,
-                      optimize_mode, background_option, year):
+                      optimize_mode, background_option, default_phase_option,
+                      year):
         """ Update parameters stored in the labeler """
         
         self.labeler.set_hyperparams(std_noise, mean, std, max_phase,
                                      expand_degree, background_length,
-                                     max_iter, optimize_mode, background_option)
+                                     max_iter, optimize_mode, background_option,
+                                     default_phase_option)
         self.model.set_temp_profile_params_by_year(year)
         xaxis, temp_profile_func, _ = self.model.get_current_temp_profile()
         self.stripeview.replot_w_new_center(xaxis, temp_profile_func)

@@ -56,7 +56,6 @@ def left_right_width_2025(tau, Temp):
 
 
 def LaserPowerMing_Spring2025(dwell, Tpeak, temp_fit = None):
-    print("USING POWER PROFILE MING SPRING 2024")
     if temp_fit is None:
         temp_fit = [-0.01824834, 0.05924233, -0.01709909, 0.01145558, 2.74505353]
 

@@ -79,7 +79,7 @@ end
         bg = zero(data)
     end
 
-    ts_stn = get_ts_stn_from_dict(dict)
+    ts_stn = get_ts_stn_from_dict(dict, server_state.phases)
     lt = Lazytree(server_state.phases, q)
     res = search!(lt, q, data, ts_stn)
 

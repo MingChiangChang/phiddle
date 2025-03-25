@@ -156,7 +156,7 @@ version = "0.2.4"
 
 [[deps.CrystalShift]]
 deps = ["CovarianceFunctions", "FastPow", "ForwardDiff", "LazyInverses", "LinearAlgebra", "NPZ", "OptimizationAlgorithms", "PrecompileTools", "Printf", "ProgressBars", "Random", "SpecialFunctions", "StatsBase", "Test"]
-git-tree-sha1 = "3875b3cdcfa024d6cc9ba27f1948e8880e5e5d78"
+git-tree-sha1 = "6d59d99c2993eae48c6d51091951df292b5e666c"
 repo-rev = "main"
 repo-url = "https://github.com/MingChiangChang/CrystalShift.jl"
 uuid = "fb120844-f04e-4a6b-a6eb-278194263097"
@@ -164,7 +164,7 @@ version = "0.1.0"
 
 [[deps.CrystalTree]]
 deps = ["Combinatorics", "CovarianceFunctions", "CrystalShift", "Einsum", "ForwardDiff", "LazyInverses", "LinearAlgebra", "LogExpFunctions", "OptimizationAlgorithms", "ProgressBars", "StatsBase", "Test"]
-git-tree-sha1 = "e9d2ea64595d9b0c902f1be7aec1fa191a40c291"
+git-tree-sha1 = "75a4e7fb117f7075fb52b3cceefb46aeeeb09cef"
 repo-rev = "main"
 repo-url = "https://github.com/MingChiangChang/CrystalTree.jl"
 uuid = "9c8cff83-2ad6-4961-8214-2a9086396538"

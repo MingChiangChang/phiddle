@@ -30,6 +30,7 @@ class labeler():
         self.results = [] # Will be stroing PhaseModels
         self.bg = np.array([])
         self.has_labeled = False
+        self.default_phase_idx = 0
 
     def construct_setting_dict(self):
         """ Construct dictionary containing setting information to be sent to backend """
@@ -52,8 +53,13 @@ class labeler():
         _dict["background"] = self.use_background
         _dict["background_length"] = self.background_length 
         _dict["background_option"] = self.background_option
+        _dict["default_phase_idx"] = self.default_phase_idx
         _dict["csv_file"] = self.csv_file
         return _dict
+
+
+    def get_phase_names(self):
+        return self.phase_names
 
 
     def read_csv(self, csv):
@@ -242,7 +248,8 @@ class labeler():
 
     def set_hyperparams(self, std_noise, mean, std, max_phase,
                         expand_k, background_length, max_iter,
-                        optimize_mode, background_option):
+                        optimize_mode, background_option,
+                        default_phase_idx):
         """
         Set the hyperparameters for the model.
 
@@ -266,6 +273,7 @@ class labeler():
         self.max_iter = max_iter
         self.optimize_mode = optimize_mode
         self.background_option = background_option
+        self.default_phase_idx = default_phase_idx
 
 
     def get_dict_for_storing(self):

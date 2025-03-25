@@ -17,7 +17,7 @@ class Popup(QWidget):
     Attributes:
         set_clicked (pyqtSignal): Signal emitted when the "Set" button is clicked.
     """
-    set_clicked = pyqtSignal(float, list, list, int, int, float, int, str, str, str)
+    set_clicked = pyqtSignal(float, list, list, int, int, float, int, str, str, int, str)
 
     def __init__(self, parent=None):
         """ Initializes the Popup window and sets up UI elements. """
@@ -65,6 +65,13 @@ class Popup(QWidget):
         self.optimize_mode_options = ["Simple", "EM", "With Uncertainty"]
         self.optimize_mode_dropdown.addItems(self.optimize_mode_options)
 
+
+        self.default_phase_prompt = QLabel()
+        self.default_phase_prompt.setText("Default Phase")
+        self.default_phase_dropdown = QComboBox()
+        self._default_phase_options = []
+        self.default_phase_dropdown.addItems(self.default_phase_options)
+
         self.background_option_prompt = QLabel()
         self.background_option_prompt.setText("Background option")
         self.background_dropdown = QComboBox()
@@ -99,6 +106,8 @@ class Popup(QWidget):
         grid_layout.addWidget(self.optimize_mode_dropdown, 3, 3)
         grid_layout.addWidget(self.background_option_prompt, 4, 2)
         grid_layout.addWidget(self.background_dropdown, 4, 3)
+        grid_layout.addWidget(self.default_phase_prompt, 5, 2)
+        grid_layout.addWidget(self.default_phase_dropdown, 5, 3)
         grid_layout.addWidget(self.temp_profile_prompt, 7, 0)
         grid_layout.addWidget(self.temp_profile_dropdown, 7, 1)
 
@@ -114,6 +123,17 @@ class Popup(QWidget):
         grid_layout.addWidget(cancel_button, 7, 2)
 
         self.setLayout(grid_layout)
+
+    @property
+    def default_phase_options(self):
+        return self._default_phase_options
+
+
+    @default_phase_options.setter
+    def default_phase_options(self, phases):
+        self._default_phase_options = phases
+        self.default_phase_dropdown.clear()
+        self.default_phase_dropdown.addItems(self._default_phase_options)
 
     def set_default_text(self, std_noise: float, mean: list, std: list,
                          max_phase: int, expand_degree: int,
@@ -173,6 +193,7 @@ class Popup(QWidget):
             max_iter = int(self.max_iter_edit.text())
             optimize_mode = self.optimize_mode_dropdown.currentText()
             background_option = self.background_dropdown.currentText()
+            default_phase_option = self.default_phase_dropdown.currentIndex()
             temp_year_option = self.temp_profile_dropdown.currentText()
 
             self.set_clicked.emit(std_noise,
@@ -184,6 +205,7 @@ class Popup(QWidget):
                                   max_iter,
                                   optimize_mode,
                                   background_option,
+                                  default_phase_option,
                                   temp_year_option)
             self.close()
         except ValueError:

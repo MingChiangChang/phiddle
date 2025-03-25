@@ -57,17 +57,31 @@ function get_opt_method_enum(opt_mode::String)
 end
 
 
-function get_ts_stn_from_dict(dict::Dict)
+function get_ts_stn_from_dict(dict::Dict, phases)
     opt_stn = get_opt_stn_from_dict(dict)
-    TreeSearchSettings{Float64}(dict["depth"], dict["k"], dict["amorphous"], dict["background"], dict["background_length"], opt_stn)
+    if dict["default_phase_idx"] == 0
+        return TreeSearchSettings{Float64}(dict["depth"],
+                                           dict["k"],
+                                           dict["amorphous"],
+                                           dict["background"],
+                                           dict["background_length"],
+                                           opt_stn)
+    end
+
+    return TreeSearchSettings{Float64}(dict["depth"],
+                                       dict["k"],
+                                       dict["amorphous"],
+                                       dict["background"],
+                                       dict["background_length"],
+                                       phases[dict["default_phase_idx"]],
+                                       opt_stn)
+
 end
 
 
 function struct_instance_from_dict(struct_type::Type, dict::Dict{String, Any})
     # Convert keys to Symbols if they're Strings to match field names
     symbolized_dict = Dict(Symbol(k) => v for (k, v) in dict)
-    println(dict)
-
     # Use keyword argument splatting to pass the dictionary values to the constructor
     return struct_type(; symbolized_dict...)
 end

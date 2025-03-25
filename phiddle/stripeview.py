@@ -433,11 +433,11 @@ class stripeview(FigureCanvasQTAgg):
                               label=phase)
         
         self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_names)) + f" {self.confidence:.4f}")
-        self.spectra.legend(fontsize=7, loc="upper right")
         self.spectra.set_xlabel("q ($nm^{-1}$)")
         res = self.rescale(self.fitted_pattern, _min, _max)
         res = res - fit
         self.spectra.plot(self.fitted_q, (res - .2), label="residual", c='grey')
+        self.spectra.legend(fontsize=7, loc="upper right")
 
     def replot_w_new_center(self, xaxis, temp_profile_func=None):
         """ 
