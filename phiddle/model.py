@@ -204,7 +204,7 @@ class datamodel():
     def get_current_phases_bw_x_range(self, x_min_ind, x_max_ind):
         phases = set()
         x_range = range(x_min_ind, x_max_ind+1)
-        if self.df['center_idx'][self.ind] in x_range:
+        if int(self.df['center_idx'][self.ind]) in x_range:
             for phase in self.df['phases'][self.ind]:
                 phases.add(phase)
         for x_idx in x_range:
