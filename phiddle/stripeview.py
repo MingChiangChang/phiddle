@@ -3,7 +3,7 @@ import requests
 import sys
 
 import numpy as np
-np.set_printoptions(threshold=sys.maxsize)
+np.set_printoptions(threshold=sys.maxsize) # print all arrays
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.backend_bases import MouseButton
 from matplotlib.figure import Figure
@@ -22,7 +22,6 @@ from setting import PlotSettings, HeatmapPlotSettings, set_plot
 #       1. Remove repetitive code in stripeview to make clear API
 #       2. Model should use emit so view controller has less thing to do
 # TODO: Allow vmin vmax selection in heatmap (slide bar?)
-# FIXME: Size mismatch after zoom-in and zoom-out
 
 class stripeview(FigureCanvasQTAgg):
     """
@@ -60,21 +59,24 @@ class stripeview(FigureCanvasQTAgg):
         self.bottomY = -100
         self.topY = 100
         self.temp_bottomY = 0
-        self.temp_topY = 1414
+        self.temp_topY = 1E10
 
         self.spectra_box_y = np.array([1.1, -1.1, -1.1, 1.1, 1.1])
         self.spectra_left_x = 0
         self.spectra_right_x = 1024
 
         self.avg_pattern = None
-        self.avg_q = None
+        self.current_q = None
         self.moving = False
         self._min = 0
         self._max = 1
 
-        self.cid1 = self.mpl_connect("button_press_event", self.onclick)
-        self.cid2 = self.mpl_connect("button_release_event", self.onrelease)
-        self.cid3 = self.mpl_connect("motion_notify_event", self.onmotion)
+        self.cid1 = self.mpl_connect("button_press_event",
+                                     self.onclick)
+        self.cid2 = self.mpl_connect("button_release_event",
+                                     self.onrelease)
+        self.cid3 = self.mpl_connect("motion_notify_event",
+                                     self.onmotion)
 
         self.fit_result = None
         self.sticks = None
@@ -97,7 +99,6 @@ class stripeview(FigureCanvasQTAgg):
                          self.temp_topY,
                          self.temp_bottomY,
                          self.temp_bottomY], dtype=int)
-
 
     @property
     def box_y(self):
@@ -171,7 +172,7 @@ class stripeview(FigureCanvasQTAgg):
         else:
             self.avg_pattern = np.mean(
                 self.data[self.q_min_ind:self.q_max_ind, self.x_min_ind:self.x_max_ind], axis=1)
-        self.avg_q = self.q[self.q_min_ind:self.q_max_ind]
+        self.current_q = self.q[self.q_min_ind:self.q_max_ind]
         pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
 
         try:
@@ -189,9 +190,13 @@ class stripeview(FigureCanvasQTAgg):
         self.temp_selection_box.set_xdata(self.box_x)
         self.selection_box.set_ydata(self.box_y)
 
-        self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2,
+        self.spectra.plot(self.current_q,
+                          pattern_to_plot,
+                          color='k',
+                          linewidth=2,
                           label="XRD") 
-        self.spectra.set_xlim((self.avg_q[0], self.avg_q[-1]))
+        self.spectra.set_xlim((self.current_q[0],
+                               self.current_q[-1]))
 
         if self.fit_result is not None:
             self.plot_scaled_results(_min, _max)
@@ -234,13 +239,57 @@ class stripeview(FigureCanvasQTAgg):
                 pass
 
             self.moving = True
+    
+    def is_moveless(self, event):
+        return event.x == self._clicked_x
 
 
-    def is_moveless_right_click(self, event):
+    def is_moveless_click(self, event, left=False):
         """ Detect moveless right click, which reset the scale of the plots"""
+        button = MouseButton.RIGHT
+        if left:
+            button = MouseButton.LEFT
         return ((event.inaxes in [self.spectra])
-                and (event.button is MouseButton.RIGHT)
-                and (event.x == self._clicked_x))
+                and (event.button is button)
+                and self.is_moveless(event))
+
+
+
+    def reset_scale(self):
+        self.spectra.clear()
+        self.q_min_ind = 0
+        self.q_max_ind = len(self.q) + 1
+        self.spectra_left_x = np.min(self.q)
+        self.spectra_right_x = np.max(self.q)
+        (self.spectra_select_box, ) = self.spectra.plot(
+                                           self.spectra_box_x,
+                                           self.spectra_box_y,
+                                           color='r')
+
+        self.current_q = deepcopy(self.q)
+
+        if self.x_min_ind == self.x_max_ind:
+            self.avg_pattern = self.data[:, self.x_min_ind]
+        else:
+            self.avg_pattern = np.mean(self.data[:, self.x_min_ind:self.x_max_ind], axis=1)
+
+        if self.fit_result is not None:
+            self.plot_label_result_w_spectra()
+        else:
+            (self.avgplot, ) = self.spectra.plot(
+                    self.current_q, 
+                    minmax_norm(self.avg_pattern)[0],
+                    linewidth=2,
+                    color='k',
+                    label="XRD")
+        self.spectra.legend(fontsize=7, loc="upper right")
+        self.spectra.set_ylim((-0.3, 1.1))
+        self.spectra.set_xlim((self.q[0], self.q[-1]))
+
+        self.stick_patterns.clear()
+        self.plot_cifs(self.sticks, (self.q[0], self.q[-1]))
+        # self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
+        self.draw()
 
 
     def onrelease(self, event):
@@ -252,36 +301,10 @@ class stripeview(FigureCanvasQTAgg):
         Left click and drag (release in heatmap): Take average of the selected region and 
                                                   plot in XRD spectra
         """
-        if self.is_moveless_right_click(event):
-            self.spectra.clear()
-            self.q_min_ind = 0
-            self.q_max_ind = len(self.q) + 1
-            self.spectra_left_x = np.min(self.q)
-            self.spectra_right_x = np.max(self.q)
-            (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x,
-                                                            self.spectra_box_y,
-                                                            color='r')
-
-            self.avg_q = deepcopy(self.q)
-            if self.x_min_ind == self.x_max_ind:
-                self.avg_pattern = self.data[:, self.x_min_ind]
-            else:
-                self.avg_pattern = np.mean(self.data[:, self.x_min_ind:self.x_max_ind], axis=1)
-
-            if self.fit_result is not None:
-                self.plot_label_result_w_spectra()
-            else:
-                (self.avgplot, ) = self.spectra.plot(self.avg_q, 
-                                             minmax_norm(self.avg_pattern)[0],
-                                             linewidth=2, color='k', label="XRD")
-            self.spectra.legend(fontsize=7, loc="upper right")
-            self.spectra.set_ylim((-0.3, 1.1))
-            self.spectra.set_xlim((self.q[0], self.q[-1]))
-
-            self.stick_patterns.clear()
-            self.plot_cifs(self.sticks, (self.q[0], self.q[-1]))
-            # self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
-            self.draw()
+        if self.is_moveless_click(event):
+            self.reset_scale()
+            return
+        if self.is_moveless_click(event, left=True):
             return
 
         if event.inaxes in [self.heatmap]:
@@ -310,6 +333,8 @@ class stripeview(FigureCanvasQTAgg):
             # Let this be here for now
             self.q_min_ind = find_first_larger(self.q, self.bottomY)
             self.q_max_ind = find_first_smaller(self.q, self.topY) + 1
+            print("bottom, top", self.bottomY, self.topY)
+            print("q_min, q_max_ind", self.q_min_ind, self.q_max_ind)
 
             self.x_min_ind = self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.LeftX))
             self.x_max_ind = self.transform_x_to_data_idx(find_first_larger(self.xaxis, self.RightX))
@@ -325,31 +350,18 @@ class stripeview(FigureCanvasQTAgg):
             #       next label result and then do right click
             #       This causes mismatch in q and pattern
             #       Only reset the fiited_q cause the scaling to be wrong
-            self.avg_q = self.q[self.q_min_ind:self.q_max_ind]
+            self.current_q = self.q[self.q_min_ind:self.q_max_ind]
             pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
 
             self.spectra.clear()
             (self.spectra_select_box, ) = self.spectra.plot(self.spectra_box_x, self.spectra_box_y, color='r')
 
-            self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
+            self.spectra.plot(self.current_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
 
             if self.fit_result is not None:
                 self.plot_scaled_results(_min, _max)
-            
-            if event.button is MouseButton.LEFT:
-                self.spectra.set_xlim((self.q[0], self.q[-1]))
-                self.stick_patterns.set_xlim((self.q[0], self.q[-1]))
-                self.plot_cifs(self.sticks, (self.q[0], self.q[-1]))
-            elif event.button is MouseButton.RIGHT:
-
-                self.plot_cifs(self.sticks, (self.avg_q[0], self.avg_q[-1]))
-                self.spectra.set_xlim((self.avg_q[0], self.avg_q[-1]))
-                # if self.sticks is not None:
-                #     renormalized_sticks = self.renormalize_stick_in_range(qmin=self.avg_q[0],
-                #                                                           qmax=self.avg_q[-1])
-                #     self.plot_cifs(renormalized_sticks)
-                # self.stick_patterns.set_xlim((self.avg_q[0], self.avg_q[-1]))
-
+            self.plot_cifs(self.sticks, (self.current_q[0], self.current_q[-1]))
+            self.spectra.set_xlim((self.current_q[0], self.current_q[-1]))
             self.spectra.set_ylim((-0.3, 1.1))
             self.spectra.set_ylabel("Avg intensity (a.u.)")
             self.spectra.legend(fontsize=7, loc="upper right")
@@ -438,6 +450,7 @@ class stripeview(FigureCanvasQTAgg):
         res = res - fit
         self.spectra.plot(self.fitted_q, (res - .2), label="residual", c='grey')
         self.spectra.legend(fontsize=7, loc="upper right")
+        self.spectra.set_xlim(self.current_q[0], self.current_q[-1])
 
     def replot_w_new_center(self, xaxis, temp_profile_func=None):
         """ 
@@ -542,6 +555,7 @@ class stripeview(FigureCanvasQTAgg):
         """ This will include initializing some attributes like self.q """
         self.clear_figures()
         self.q = data['q']
+        self.current_q = data['q']
         self.data = data['data']
         self.topY = np.max(data['q'])
         self.x = data['x']
@@ -562,7 +576,7 @@ class stripeview(FigureCanvasQTAgg):
             for cation, frac in zip(self.cations, self.fracs):
                 self.comp_title += f" {cation}:{frac:.3f}"
 
-        self.avg_q = deepcopy(self.q)
+        self.current_q = deepcopy(self.q)
 
         self.spectra_left_x = np.min(self.q)
         self.spectra_right_x = np.max(self.q)
@@ -598,7 +612,7 @@ class stripeview(FigureCanvasQTAgg):
 
         if self.avg_pattern is None:
             self.avg_pattern = self.data[:, self.transform_x_to_data_idx(find_first_larger(xaxis, 0.))] # FIXME: change to center of t profile
-        (self.avgplot, ) = self.spectra.plot(self.avg_q,
+        (self.avgplot, ) = self.spectra.plot(self.current_q,
                                              minmax_norm(self.avg_pattern)[0],
                                              linewidth=2, color='k', label="XRD")
         self.spectra.legend(fontsize=7, loc="upper right")
@@ -622,15 +636,15 @@ class stripeview(FigureCanvasQTAgg):
         phase_names.remove("background")
         bg = self.bg + np.array(self.fit_result["background"])
 
-        fit = fit[self.q_min_ind:self.q_max_ind]
-        bg = bg[self.q_min_ind:self.q_max_ind]
+        # fit = fit[self.q_min_ind:self.q_max_ind]
+        # bg = bg[self.q_min_ind:self.q_max_ind]
 
         self.spectra.plot(self.fitted_q, fit, label="Fitted")
         self.spectra.plot(self.fitted_q, bg, label="background")
 
         for phase in phase_names:
             self.spectra.plot(self.fitted_q,
-                              self.fit_result[phase][self.q_min_ind:self.q_max_ind],
+                              self.fit_result[phase],#[self.q_min_ind:self.q_max_ind],
                               label=phase)
 
         self.spectra.set_title(f"No. {self.ind} " + ("_".join(phase_names)) + f" {self.confidence:.4f}")
@@ -640,20 +654,21 @@ class stripeview(FigureCanvasQTAgg):
         # self.spectra_settings.xmax = self.q[-1]
         # set_plot(self.spectra, self.spectra_settings)
 
-        self.spectra.set_xlim((self.fitted_q[0], self.fitted_q[-1]))
-        self.spectra.set_ylim((-0.3, 1.1))
-        self.spectra.set_xlabel("q ($nm^{-1}$)")
-        self.spectra.set_ylabel("Avg intensity (a.u.)")
         self.spectra.plot(self.fitted_q,
                           (self.fitted_pattern - fit - .2),
                           label="residual", c='grey')
+
+        self.spectra.set_xlim((self.current_q[0], self.current_q[-1]))
+        self.spectra.set_ylim((-0.3, 1.1))
+        self.spectra.set_xlabel("q ($nm^{-1}$)")
+        self.spectra.set_ylabel("Avg intensity (a.u.)")
 
         self.draw()
 
     # FIXME: Allow "next label result" while zoomed in
     def plot_n_store_label_result_w_spectra(self, ind, confidence, fit_result, bg=None):
         """ Store in labeling result in self and plot """
-        self.fitted_q = deepcopy(self.avg_q)
+        self.fitted_q = deepcopy(self.current_q)
         self.fitted_pattern, self._min, self._max = minmax_norm(self.avg_pattern)
         self.ind = ind
         self.confidence = confidence
@@ -666,11 +681,25 @@ class stripeview(FigureCanvasQTAgg):
         """ plot both spectra and fit result """
         self.spectra.clear()
 
-        if self.avg_pattern is None:
-            self.avg_pattern = self.data[:, round(self.data.shape[1] / 2)]
+        # if self.avg_pattern is None:
+        #     self.avg_pattern = self.data[:, round(self.data.shape[1] / 2)]
+
+        if self.LeftX == self.RightX:
+            self.avg_pattern = self.data[self.q_min_ind:self.q_max_ind, self.x_min_ind]
+        else:
+            self.avg_pattern = np.mean(
+                self.data[self.q_min_ind:self.q_max_ind, self.x_min_ind:self.x_max_ind],
+                axis=1)
+
+        # TODO: after label, if you right click and drag then click
+        #       next label result and then do right click
+        #       This causes mismatch in q and pattern
+        #       Only reset the fiited_q cause the scaling to be wrong
+        self.current_q = self.q[self.q_min_ind:self.q_max_ind]
+        pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
         
-        (self.avgplot, ) = self.spectra.plot(self.fitted_q,
-                                             self.fitted_pattern,
+        (self.avgplot, ) = self.spectra.plot(self.current_q, # self.fitted_q,
+                                             pattern_to_plot, #self.fitted_pattern,
                                              linewidth=2,
                                              color='k',
                                              label="XRD")
@@ -678,7 +707,7 @@ class stripeview(FigureCanvasQTAgg):
         (self.spectra_select_box, ) = self.spectra.plot(
             self.spectra_box_x, self.spectra_box_y, color='r')
 
-        self.plot_fit_result()
+        self.plot_fit_result() # FIXME: use sequential function calling instead of nested
 
     def plot_cifs(self, sticks, q_range=None):
         """
@@ -696,10 +725,10 @@ class stripeview(FigureCanvasQTAgg):
 
         if q_range is not None:
             q_min, q_max = q_range
-        elif self.avg_q is not None:
-            q_min, q_max = self.avg_q[0], self.avg_q[-1]
+        # elif self.current_q is not None: # FIXME: This logic is wrong
+        #     q_min, q_max = self.current_q[0], self.current_q[-1]
         else:
-            q_min, q_max = self.q[0], self.q[-1]
+            q_min, q_max = self.current_q[0], self.current_q[-1]
 
         proxies = []
         for i, phase in enumerate(sticks):
@@ -719,6 +748,7 @@ class stripeview(FigureCanvasQTAgg):
         self.stick_patterns.legend(handles=proxies, fontsize=7, loc="upper right")
         self.stick_patterns.set_xlim((q_min, q_max))
         self.stick_patterns.set_ylim((0, 1))
+        print("stick reploted")
         self.draw()
 
     def get_patches(self, qs, Is, color):
@@ -905,9 +935,9 @@ class stripeview(FigureCanvasQTAgg):
             self.avg_pattern = np.mean(
                 self.data[self.q_min_ind:self.q_max_ind, self.x_min_ind:self.x_max_ind], axis=1)
         pattern_to_plot, _min, _max = minmax_norm(self.avg_pattern) 
-        self.avg_q = self.q[self.q_min_ind:self.q_max_ind]
+        self.current_q = self.q[self.q_min_ind:self.q_max_ind]
 
-        self.spectra.plot(self.avg_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
+        self.spectra.plot(self.current_q, pattern_to_plot, color='k', linewidth=2, label="XRD") 
 
         if self.fit_result is not None:
             self.plot_scaled_results(_min, _max)#, q_min_ind, q_max_ind)

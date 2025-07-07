@@ -87,8 +87,6 @@ end
     probs = get_probabilities(res, q, data, dict["std_noise"], mean_θ, std_θ)
     idx = sortperm(probs, rev=true)
     server_state.fit_result = [res[i].phase_model for i in idx]  
-    println(idx)
-    println(server_state.fit_result[1])
 
     return res[idx], probs[idx], bg
 end
@@ -154,6 +152,11 @@ end
 
     opt_stn = get_opt_stn_from_dict(dict)
     result = optimize!(pm, q, data, opt_stn)
+    # println(q)
+    # mask = q .< 23 .|| q.>27
+    # println(sum(mask))
+    # r = evaluate!(zero(q), result, q)
+    # println("Rp: $(calc_Rp(r[mask], data[mask]))")
     server_state.fit_result = [result]
     return result, [1.], bg
 end

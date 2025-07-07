@@ -51,8 +51,59 @@ class globalview(FigureCanvasQTAgg):
         self.wafer_map.clear()
         self.cbar_ax.clear()
 
-    def plot(self, dwells, tpeaks, x, y,
-             labeled, current): 
+    # def _plot_condition(self, ax, dwells, tpeaks, labeled, current,
+    #                     xlabel="Dwell (us)", ylabel="Peak temperature ($^oC$)",
+    #                     xscale="log"):
+    #     unlabeled = np.logical_not(labeled)
+    #     self.clear_figures()
+
+    #     self.condition_artist = self.condition_map.scatter(
+    #         dwells, tpeaks, color='b', s=8, picker=True)
+    #     self.condition_map.scatter(dwells[labeled], tpeaks[labeled], s=8,
+    #                                color='g', picker=0.)
+    #     self.condition_map.scatter(dwells[unlabeled], tpeaks[unlabeled], s=8,
+    #                                color='b', picker=0.)
+
+    #     self.condition_map.scatter(
+    #         dwells[current],
+    #         tpeaks[current],
+    #         s=8,
+    #         color='r',
+    #         picker=0.)
+    #     self.condition_map.set_xscale(xscale)
+    #     self.condition_map.set_xlabel(xlabel)
+    #     self.condition_map.set_ylabel(ylabel)
+
+    #     dwell_size = np.log(dwells)
+    #     dwell_size -= np.min(dwell_size)
+    #     dwell_size /= np.max(dwell_size)
+
+    #     self.location_artist = self.wafer_map.scatter(
+    #         x, y, c=tpeaks, s=8, picker=True, alpha=0.)
+    #     im = self.wafer_map.scatter(x[labeled], y[labeled], 
+    #                            s=20*dwell_size[labeled]+8,
+    #                            c=tpeaks[labeled], picker=0., cmap=self.cmap,
+    #                            vmin=np.min(tpeaks), vmax=np.max(tpeaks))
+
+    #     self.wafer_map.scatter(x[unlabeled], y[unlabeled], s=20*dwell_size[unlabeled]+8,
+    #                            c=tpeaks[unlabeled],
+    #                            marker='x', picker=0., cmap=self.cmap)
+
+    #     self.wafer_map.scatter(x[current], y[current], s=50,
+    #                            color="r",
+    #                            picker=0.,
+    #                            )
+    #     self.wafer_map.set_xlabel("x (mm)")
+    #     self.wafer_map.set_ylabel("y (mm)")
+    #     # self.fig.subplots_adjust(right=0.9)
+    #     # self.cbar_ax = self.fig.add_axes([0.92, 0.15, 0.02, 0.7])
+    #     self.fig.colorbar(im, cax=self.cbar_ax)
+    #     self.cbar_ax.set_label("$^oC$")
+
+    #     self.draw()
+
+
+    def plot(self, dwells, tpeaks, x, y, labeled, current): 
         """
         Plots the condition map and wafer map using the provided data.
         It distinguishes between labeled and unlabeled points,

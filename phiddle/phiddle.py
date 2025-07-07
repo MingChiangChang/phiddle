@@ -562,7 +562,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         Label the XRD pattern with all phases taken into considerations 
         Will show the fitted pattern in stripeview
         """
-        self.labeler.label(self.stripeview.avg_q, self.stripeview.avg_pattern)
+        self.labeler.label(self.stripeview.current_q, self.stripeview.avg_pattern)
         self.stripeview.plot_n_store_label_result_w_spectra(
             1, self.labeler.probs[0], self.labeler.fit_result, self.labeler.bg)
 
@@ -573,7 +573,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         """
         selected_phase_names = self.cifview.get_checked_phase_names()
         if selected_phase_names:
-            self.labeler.fit_phases(self.stripeview.avg_q,
+            self.labeler.fit_phases(self.stripeview.current_q,
                                     self.stripeview.avg_pattern,
                                     selected_phase_names)
             self.stripeview.plot_n_store_label_result_w_spectra(
@@ -586,7 +586,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         """
         selected_phase_names = self.cifview.get_checked_phase_names()
         if selected_phase_names:
-            self.labeler.label(self.stripeview.avg_q,
+            self.labeler.label(self.stripeview.current_q,
                                     self.stripeview.avg_pattern,
                                     selected_phase_names)
             self.stripeview.plot_n_store_label_result_w_spectra(
@@ -599,7 +599,7 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.save_button_clicked()
             return
         filename = self.model.current_filename
-        d = np.vstack((self.stripeview.avg_q, self.labeler.residual))
+        d = np.vstack((self.stripeview.current_q, self.labeler.residual))
         fn, _ = QFileDialog.getSaveFileName(
             self, 'Save Residual File', filename, "")
         if fn.endswith('xy'):
@@ -613,7 +613,8 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         designated by the user input extension
         """
         filename = self.stripeview.get_file_name() # self.model.current_filename
-        d = np.vstack((self.stripeview.avg_q, self.stripeview.avg_pattern))
+        d = np.vstack((self.stripeview.current_q,
+                       self.stripeview.avg_pattern))
         fn, _ = QFileDialog.getSaveFileName(self, 'Save File', filename, "")
 
         if self.labeler.has_labeled:

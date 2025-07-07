@@ -22,22 +22,7 @@ import numpy as np
 def main():
     parser = get_parser()
     args = parser.parse_args()
-    cifs = list(Path(args.cif).glob('*.cif'))
-    # cifs = ["/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi2o3_alpha.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi2o3_beta.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi2o3_delta.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi2O3-SiO2_Silicate_ICSD_CollCode30995.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi2Ti2O7_1_Fd-3mZ.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi2Ti4O11_1_C12m1.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi4Ti3O12_Aba2.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi7.68Ti0.32O12.16_0_P42nmcS.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Bi_As.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/Ti8Bi9O0.25_0_P4nmmZ.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/TiO2_Anatase_EntryWithCollCode154604.cif",
-    #         "/Users/ming/Desktop/Data/cifsssss/BiTiO/TiO2_Rutile_CollCode159915.cif"]
-    if not args.outpath.endswith('.csv'):
-        args.outpath += '.csv'
-    cif_to_input(cifs, args.outpath, (float(args.qmin), float(args.qmax)), args.wvlen)
+    print({"t": "1", **args.__dict__})
 
 
 def get_parser():
@@ -100,11 +85,12 @@ def write_peaks_info(f, lattice, q_range, wvlen):
             qs.append(q)
             Is.append(I)
     Is = np.array(Is)
-    Is /= np.max(Is)
+    nc = np.max(Is)
+    Is /= nc
 
     for i, _ in enumerate(Is):
         if q_range[0] < qs[i] < q_range[1] and Is[i]>0.001:
-            f.write(f'\n{hs[i]},{ks[i]},{ls[i]},{qs[i]},{Is[i]}')
+            f.write(f'\n{hs[i]},{ks[i]},{ls[i]},{qs[i]},{Is[i]*nc}')
     f.write('#\n')
 
 def q_to_two_theta(wvlen, *args):
@@ -185,33 +171,3 @@ def _get_crystal_system(info_dict):
 
 if __name__ == "__main__":
     main()
-    # home = Path.home()
-    # path = home / 'Desktop' / 'github' /\
-    #        'Crystallography_based_shifting' / 'data'
-    # path = home / 'Downloads' / 'CIF-3'
-    # path = home / "Downloads" / "CrFeV_toCornell" / "icdd"
-    # path = home / 'Desktop' / 'Code' / 'CrystalShift.jl' / 'data' / 'calibration'
-    # path = home / "Downloads" / "tio2"
-    # path = home / "Downloads" / "test"
-    # path = home / "Downloads" / "YourCustomFileName"
-    # path = home / "Downloads" / "CIFs-2" / "LaOx"
-    # path = home / "Desktop" / "All_CIFs"
-    # path = home / "Downloads" / "ino"
-    # path = home / "Desktop" / "Code" / "SARA.jl" / "BiTiO" / "cifs"
-    # path = home / "Downloads" / "toCornell_Ming" / "cifs"
-    # #path = home / "Desktop" / "TaSnCoO" / "cifs"
-    # path = home / "Downloads" / "igzo_2" 
-    # path = home / "Desktop" / "test_cif"
-    # path = Path("/Users/ming/Desktop/Code/SARA.jl/BiTiO/new_cifs")
-    # path = Path("/Users/ming/Downloads/drive-download-20230911T012020Z-001/cifs")
-    # path = Path("/Users/ming/Downloads/crfevo_cifs")
-    # #path = Path("/Users/ming/Downloads/test_sf")
-    # path = Path("/Users/ming/Desktop/cifsssss/CandidateCifs/ICSD/Ti-O")
-    # #path = home / "Downloads" / "AlLiFeO copy"
-    # cif_paths = list(path.glob('*.cif'))
-    # #cif_paths = path.glob("Ta-Sn-O/*/*.cif")
-
-    # # cif_paths = [str(path / 'Bi2Ti2O7_ICSD.cif') , str(path / 'Delta.cif')]
-    # out_path = path #/ 'Ta-Sn-O'
-    # print(cif_paths)
-    # cif_to_input(cif_paths, out_path, (10, 80))

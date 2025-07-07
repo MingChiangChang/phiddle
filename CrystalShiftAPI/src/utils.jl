@@ -89,3 +89,9 @@ end
 function get_phase_with_name(cs::AbstractVector, name::String)
     return cs[findfirst(x->x.name==name, cs)]
 end
+
+function calc_Rp(pred, gt)
+    rss = sum(abs2, pred .- gt)
+    ss = sum(abs2, gt)
+    sqrt(rss / ss)
+end
