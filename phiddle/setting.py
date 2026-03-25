@@ -25,7 +25,7 @@ class PlotSettings():
 @dataclass
 class HeatmapPlotSettings(PlotSettings): 
     vmin: float = 0.0
-    vmin: float = 1.0
+    vmax: float = 1.0
     cmap: str = "" # FIXME: Find a defual cmap
 
 
