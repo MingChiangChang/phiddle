@@ -1,23 +1,39 @@
 # Phiddle: GUI for phase identification for laser experiments
 ## Installation
-1. Install Phiddle with [uv](https://docs.astral.sh/uv/)
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+```console
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+2. Install Phiddle
 ```console
 git clone git@github.com:MingChiangChang/phiddle.git
 cd phiddle
 uv sync
 ```
-Without uv, `pip install .` (latest compatible versions) or `pip install -r requirements.txt` (the exact locked versions) also work.
-2. Install CrystalShiftAPI
-Install [julia](https://julialang.org/downloads/).
-Then install CrystalShift and CrystalTree using julia package manager
-```julia
-julia --project=../CrystalShiftAPI -e 'using Pkg; Pkg.instantiate()'
+This creates a `.venv` with the exact dependency versions in `uv.lock` (uv will also fetch Python 3.11 if needed).
+
+Without uv, `pip install -r requirements.txt` (the same locked versions) or `pip install .` (latest compatible versions) also work.
+
+3. Install CrystalShiftAPI
+
+Install [julia](https://julialang.org/downloads/), then install CrystalShift and CrystalTree using the Julia package manager (from the repository root):
+```console
+julia --project=CrystalShiftAPI -e 'using Pkg; Pkg.instantiate()'
 ```
 
 ## Usage
-1. Start phiddle
-``` console
-./start.sh
+Start Phiddle from the repository root:
+```console
+./phiddle/start.sh
 ```
-The shell script starts both the phase labeling backend and GUI frontend.
-Double clicking the `start.sh` shell script should also work for Window systems.
+The script starts the phase labeling backend, waits for it to be ready, then launches the GUI (through `uv run` if uv is installed, otherwise with the active `python`). It can be run from any directory, and double clicking it also works. Optional arguments preload files:
+```console
+./phiddle/start.sh --h5 data.h5 --csv phases.csv --json progress.json
+```
+
+To run the two parts separately:
+```console
+julia --project=CrystalShiftAPI --threads=6 CrystalShiftAPI/src/CrystalShiftAPI.jl
+cd phiddle && uv run python phiddle.py
+```
