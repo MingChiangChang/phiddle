@@ -56,8 +56,8 @@ def replace_nan_w_None(ls):
             a.append(None)
         else:
             a.append(i)
+    return a
 
-     
 
 def collect_data_and_q(h5, conds):
     q = []

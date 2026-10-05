@@ -235,11 +235,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         fileMenu.addAction(load_progress_act)
 
         menuBar.addMenu(fileMenu)
-        # Creating menus using a title
-        editMenu = menuBar.addMenu(" &Edit")
-        editMenu.addAction("test")
-        helpMenu = menuBar.addMenu(" &Help")
-        helpMenu.addAction("test")
 
 
     def browse_button_clicked(self):
@@ -260,7 +255,6 @@ class TopLevelWindow(QtWidgets.QMainWindow):
             self.phase_diagram_list.update_combo_boxes()
             self.lattice_param_list.update_axis_combo_boxes()
             self.ind = 0
-            # self._update(self.ind)
         elif self.h5_path.endswith("udi"):
             self.model.read_udi(self.h5_path)
             self.ind = 0
@@ -675,6 +669,16 @@ class TopLevelWindow(QtWidgets.QMainWindow):
         labeled_indices = self.model.get_current_labeled_indices()
         if labeled_indices:
             self.stripeview.plot_label_progress(labeled_indices)
+
+        self.globalview.clear_figures()
+        self.globalview.plot(
+            self.model.df['Dwell'],
+            self.model.df['Tpeak'],
+            self.model.df['x'],
+            self.model.df['y'],
+            self.model.labeled,
+            self.model.current,
+        )
 
 
     def update_params(self, std_noise, mean, std, max_phase,
